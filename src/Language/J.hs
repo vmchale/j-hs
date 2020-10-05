@@ -25,6 +25,7 @@ import           Foreign.Ptr                (FunPtr, Ptr)
 import           System.Posix.DynamicLinker (RTLDFlags (RTLD_LAZY), dlopen,
                                              dlsym)
 -- TODO: windows support
+-- (https://hackage.haskell.org/package/Win32-2.10.0.0/docs/System-Win32-DLL.html#v:getProcAddress)
 
 data J
 
@@ -47,6 +48,9 @@ jinitLinux :: IO JEnv
 jinitLinux = jinit "/usr/lib/x86_64-linux-gnu/libj.so"
 
 -- | Get a J environment
+--
+-- Don't pass the resultant 'JEnv' between threads; that fails for whatever
+-- reason
 jinit :: FilePath -- ^ Path to J library
       -> IO JEnv
 jinit libFp = do
@@ -57,6 +61,9 @@ jinit libFp = do
     let jOut = mkJGetR <$> dlsym libj "JGetR"
     JEnv jt <$> jeval <*> jread <*> jOut
 
+-- | Send some J code to the environment.
+--
+-- @20?20@
 bsDispatch :: JEnv -> BS.ByteString -> IO ()
 bsDispatch (JEnv ctx jdo _ _) bs =
     void $ BS.useAsCString bs $ jdo ctx
