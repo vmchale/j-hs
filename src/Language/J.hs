@@ -1,7 +1,9 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Language.J ( -- * Environment
                     JEnv (..)
                   , jinit
-                  , jinitLinux
+                  , libLinux
                   , bsDispatch
                   , bsOut
                   -- * FFI
@@ -17,14 +19,14 @@ module Language.J ( -- * Environment
                   , intToJType
                   ) where
 
-import           Control.Applicative        ((<$>), (<*>))
-import           Data.ByteString            as BS
-import           Data.Functor               (void)
-import           Foreign.C.String           (CString)
-import           Foreign.C.Types            (CInt (..), CLLong (..))
-import           Foreign.Ptr                (FunPtr, Ptr)
-import           System.Posix.DynamicLinker (RTLDFlags (RTLD_LAZY), dlopen,
-                                             dlsym)
+import           Control.Applicative     ((<$>), (<*>))
+import           Data.ByteString         as BS
+import           Data.Functor            (void)
+import           Foreign.C.String        (CString)
+import           Foreign.C.Types         (CInt (..), CLLong (..))
+import           Foreign.Ptr             (FunPtr, Ptr)
+import           System.Posix.ByteString (RTLDFlags (RTLD_LAZY), RawFilePath,
+                                          dlopen, dlsym)
 -- TODO: windows support
 -- (https://hackage.haskell.org/package/Win32-2.10.0.0/docs/System-Win32-DLL.html#v:getProcAddress)
 
@@ -45,14 +47,14 @@ foreign import ccall "dynamic" mkJInit :: FunPtr (IO (Ptr J)) -> IO (Ptr J)
 foreign import ccall "dynamic" mkJGetM :: FunPtr JGetMType -> JGetMType
 foreign import ccall "dynamic" mkJGetR :: FunPtr JGetRType -> JGetRType
 
-jinitLinux :: IO JEnv
-jinitLinux = jinit "/usr/lib/x86_64-linux-gnu/libj.so"
+libLinux :: RawFilePath
+libLinux = "/usr/lib/x86_64-linux-gnu/libj.so"
 
 -- | Get a J environment
 --
 -- Don't pass the resultant 'JEnv' between threads; that fails for whatever
 -- reason
-jinit :: FilePath -- ^ Path to J library
+jinit :: RawFilePath -- ^ Path to J library
       -> IO JEnv
 jinit libFp = do
     libj <- dlopen libFp [RTLD_LAZY]

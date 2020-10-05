@@ -11,7 +11,7 @@ import           Test.Tasty.HUnit
 
 main :: IO ()
 main = do
-    jenv <- jinitLinux
+    jenv <- jinit libLinux
     defaultMain $
         testGroup "J dl"
             [ testCase "Performs calculation and has sensible output" (jComp jenv)
@@ -19,18 +19,15 @@ main = do
             ]
 
 jComp :: JEnv -> Assertion
-jComp (JEnv ctx jdo _ jout) = do
-    BS.useAsCString "harmonic =: (+/ % #) &.: %" $
-        jdo ctx
-    BS.useAsCString "harmonic 1 3 6" $
-        jdo ctx
-    res <- BS.packCString =<< jout ctx
+jComp jenv = do
+    bsDispatch jenv "harmonic =: (+/ % #) &.: %"
+    bsDispatch jenv "harmonic 1 3 6"
+    res <- bsOut jenv
     res @?= "2\n"
 
 jType :: JEnv -> Assertion
-jType (JEnv ctx jdo jget _) = do
-    BS.useAsCString "a =: 6?6" $
-        jdo ctx
+jType jenv@(JEnv ctx _ jget _) = do
+    bsDispatch jenv "a =: 6?6"
     BS.useAsCString "a" $ \a ->
         alloca $ \t ->
         alloca $ \s ->
