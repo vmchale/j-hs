@@ -7,6 +7,7 @@ module Language.J ( -- * Environment
                   -- * FFI
                   , JDoType
                   , JGetMType
+                  , JGetRType
                   , J
                   , mkJDo
                   , mkJInit
@@ -62,12 +63,11 @@ jinit libFp = do
     JEnv jt <$> jeval <*> jread <*> jOut
 
 -- | Send some J code to the environment.
---
--- @20?20@
 bsDispatch :: JEnv -> BS.ByteString -> IO ()
 bsDispatch (JEnv ctx jdo _ _) bs =
     void $ BS.useAsCString bs $ jdo ctx
 
+-- | Read last output
 bsOut :: JEnv -> IO BS.ByteString
 bsOut (JEnv ctx _ _ jout) = BS.packCString =<< jout ctx
 
