@@ -1,16 +1,18 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+-- | Marshal a limited subset of J arrays into Repa arrays.
 module Language.J ( -- * Environment
-                    JEnv (..)
+                    JEnv
                   , jinit
                   , libLinux
                   , bsDispatch
                   , bsOut
-                  , JAtom (..)
-                  , getAtomInternal
                   -- * Repa
                   , JData (..)
-                  , jData
+                  , getJData
+                  -- * FFI (for testing)
+                  , JAtom (..)
+                  , getAtomInternal
                   ) where
 
 import           Control.Applicative             (pure, (<$>), (<*>))
@@ -33,11 +35,7 @@ import           System.Posix.ByteString         (RTLDFlags (RTLD_LAZY), RawFile
 
 data J
 
-data JEnv = JEnv { context   :: Ptr J
-                 , evaluator :: JDoType
-                 , reader    :: JGetMType
-                 , output    :: JGetRType
-                 }
+data JEnv = JEnv (Ptr J) JDoType JGetMType JGetRType
 
 type JDoType = Ptr J -> CString -> IO CInt
 type JGetMType = Ptr J -> CString -> Ptr CLLong -> Ptr CLLong -> Ptr (Ptr CLLong) -> Ptr (Ptr ()) -> IO CInt
@@ -79,6 +77,11 @@ bsDispatch (JEnv ctx jdo _ _) bs =
 bsOut :: JEnv -> IO BS.ByteString
 bsOut (JEnv ctx _ _ jout) = BS.packCString =<< jout ctx
 
+getJData :: R.Shape sh
+         => JEnv -> BS.ByteString -- ^ Name of the value in question
+         -> IO (JData sh)
+getJData jenv bs = jData <$> getAtomInternal jenv bs
+
 getAtomInternal :: JEnv -> BS.ByteString -- ^ Name of the value in question
                 -> IO JAtom
 getAtomInternal (JEnv ctx _ jget _) bs = do
@@ -100,9 +103,9 @@ getAtomInternal (JEnv ctx _ jget _) bs = do
             let resBytes = mult * intRank
             res <- mallocForeignPtrBytes resBytes
             let arrSz = fromIntegral mult * fromIntegral (product shape')
-            withForeignPtr res $ \r -> do
+            withForeignPtr res $ \r' -> do
                 d' <- peek d
-                memcpy r d' arrSz
+                memcpy r' d' arrSz
             pure $ JAtom ty' rank' shape' res
 
 data JAtom = JAtom { ty     :: !JType

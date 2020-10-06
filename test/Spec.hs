@@ -21,7 +21,7 @@ jComp :: JEnv -> Assertion
 jComp jenv = do
     bsDispatch jenv "harmonic =: (+/ % #) &.: %"
     bsDispatch jenv "a =: harmonic 1 3 6"
-    res <- jData <$> getAtomInternal jenv "a"
+    res <- getJData jenv "a"
     doubleList res @?= [2.0]
 
 doubleList :: JData Z -> [CDouble]
