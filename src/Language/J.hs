@@ -132,6 +132,9 @@ setJData (JEnv ctx _ _ _ jset) name (JIntArr iarr) = BS.useAsCStringLen name $ \
 setJData (JEnv ctx _ _ _ jset) name (JDoubleArr iarr) = BS.useAsCStringLen name $ \(n, sz) -> do
     (ds, d) <- repaArr JDouble iarr
     jset ctx (fromIntegral sz) n ds d
+setJData (JEnv ctx _ _ _ jset) name (JBoolArr iarr) = BS.useAsCStringLen name $ \(n, sz) -> do
+    (ds, d) <- repaArr JBool iarr
+    jset ctx (fromIntegral sz) n ds d
 setJData _ _ _ = error "Yet to be implemented"
 
 -- | Return a @'Ptr' ()@ suitable to be passed to @JSetA@

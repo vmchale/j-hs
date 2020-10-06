@@ -1,5 +1,3 @@
-# Code Quality
-- [ ] Use `coerce` over `fromIntegral` where possible
 # API
 - [ ] Vector (foreign)
 - [ ] lists
