@@ -57,7 +57,7 @@ libLinux = "/usr/lib/x86_64-linux-gnu/libj.so"
 
 -- | Get a J environment
 --
--- Don't pass the resultant 'JEnv' between threads
+-- Passing the resultant 'JEnv' between threads can cause unexpected bugs.
 jinit :: RawFilePath -- ^ Path to J library
       -> IO JEnv
 jinit libFp = do
@@ -113,6 +113,7 @@ getAtomInternal (JEnv ctx _ jget _ _) bs = do
 
 data JAtom = JAtom !JType ![CLLong] !(ForeignPtr CChar)
 
+-- | J data backed by repa array
 data JData sh = JIntArr !(R.Array RF.F sh CInt)
               | JDoubleArr !(R.Array RF.F sh CDouble)
               | JBoolArr !(R.Array RF.F sh CChar)
