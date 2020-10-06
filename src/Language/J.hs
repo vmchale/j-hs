@@ -32,7 +32,7 @@ import           System.Posix.ByteString         (RTLDFlags (RTLD_LAZY), RawFile
 -- TODO: windows support
 -- (https://hackage.haskell.org/package/Win32-2.10.0.0/docs/System-Win32-DLL.html#v:getProcAddress)
 
--- TODO: atoms of some sort? more useful https://github.com/jsoftware/stats_jserver4r/blob/4c94fc6df351fab34791aa9d78d158eaefd33b17/source/lib/j2r.c
+-- https://github.com/jsoftware/stats_jserver4r/blob/4c94fc6df351fab34791aa9d78d158eaefd33b17/source/lib/j2r.c
 
 data J
 
@@ -46,7 +46,6 @@ foreign import ccall "dynamic" mkJDo :: FunPtr JDoType -> JDoType
 foreign import ccall "dynamic" mkJInit :: FunPtr (IO (Ptr J)) -> IO (Ptr J)
 foreign import ccall "dynamic" mkJGetM :: FunPtr JGetMType -> JGetMType
 foreign import ccall "dynamic" mkJGetR :: FunPtr JGetRType -> JGetRType
-
 
 foreign import ccall unsafe "memcpy" memcpy :: Ptr a -> Ptr b -> CSize -> IO (Ptr ())
 
