@@ -124,7 +124,6 @@ data JType = JBool
            | JChar
            | JInteger
            | JDouble
-           deriving (Show, Eq)
 
 intToJType :: CLLong -> JType
 intToJType 1 = JBool
