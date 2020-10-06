@@ -2,23 +2,62 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 -- | Marshal a limited subset of J arrays into Repa arrays.
+--
+-- = Tutorial
+--
+-- Suppose we wish to perform linear regression. In J we could do:
+--
+-- @
+-- xs := 1 2 3
+-- ys := 2 4 6
+--
+-- reg_result =: ys %. xs ^/ i.2
+-- @
+--
+-- To do this with Haskell data:
+--
+-- @
+-- do
+--    jenv <- 'jinit' 'libLinux'
+--
+--    let hsArr0 = R.fromListUnboxed (R.ix1 3) [1.0,2.0,3.0]
+--        hsArr1 = R.fromListUnboxed (R.ix1 3) [2.0,4.0,6.0]
+--        jArr0 = 'JDoubleArr' $ R.copyS $ R.map (realToFrac :: Double -> CDouble) hsArr0
+--        jArr1 = 'JDoubleArr' $ R.copyS $ R.map (realToFrac :: Double -> CDouble) hsArr1
+--
+--    'setJData' jenv "xs" jArr0
+--    'setJData' jenv "ys" jArr1
+--
+--    'bsDispatch' jenv "reg_result =: ys %. xs ^/ i.2"
+--
+--    'JDoubleArr' res <- 'getJData' jenv "reg_result"
+--    R.toList res
+-- @
 module Language.J ( -- * Environment
-                    JEnv
+                    JEnv (..)
                   , jinit
                   , libLinux
                   , libMac
                   , bsDispatch
                   , bsOut
+                  , JVersion
                   -- * Repa
                   , JData (..)
                   , getJData
                   , setJData
+                  -- * FFI
+                  , J
+                  , JDoType
+                  , JGetMType
+                  , JGetRType
+                  , JSetAType
                   ) where
 
 import           Control.Applicative             (pure, (<$>), (<*>))
 import qualified Data.Array.Repa                 as R
 import qualified Data.Array.Repa.Repr.ForeignPtr as RF
 import qualified Data.ByteString                 as BS
+import qualified Data.ByteString.Char8           as ASCII
 import qualified Data.ByteString.Internal        as BS
 import           Data.Functor                    (void)
 import           Foreign.C.String                (CString)
@@ -39,7 +78,12 @@ import           System.Posix.ByteString         (RTLDFlags (RTLD_LAZY), RawFile
 
 data J
 
-data JEnv = JEnv (Ptr J) JDoType JGetMType JGetRType JSetAType
+data JEnv = JEnv { context   :: Ptr J
+                 , evaluator :: JDoType
+                 , reader    :: JGetMType
+                 , out       :: JGetRType
+                 , setter    :: JSetAType
+                 }
 
 type JDoType = Ptr J -> CString -> IO CInt
 type JGetMType = Ptr J -> CString -> Ptr CLLong -> Ptr CLLong -> Ptr (Ptr CLLong) -> Ptr (Ptr CChar) -> IO CInt
@@ -56,9 +100,11 @@ foreign import ccall "dynamic" mkJSetA :: FunPtr JSetAType -> JSetAType
 libLinux :: RawFilePath
 libLinux = "/usr/lib/x86_64-linux-gnu/libj.so"
 
+type JVersion = [Int]
+
 -- | Expected 'RawFilePath' to the library on Mac.
-libMac :: RawFilePath
-libMac = "/Applications/j64-807/bin/libj.dylib"
+libMac :: JVersion -> RawFilePath
+libMac v = "/Applications/j64-" <> ASCII.pack (concatMap show v) <> "/bin/libj.dylib"
 
 -- | Get a J environment
 --
@@ -135,7 +181,9 @@ setJData (JEnv ctx _ _ _ jset) name (JDoubleArr iarr) = BS.useAsCStringLen name 
 setJData (JEnv ctx _ _ _ jset) name (JBoolArr iarr) = BS.useAsCStringLen name $ \(n, sz) -> do
     (ds, d) <- repaArr JBool iarr
     jset ctx (fromIntegral sz) n ds d
-setJData _ _ _ = error "Yet to be implemented"
+setJData (JEnv ctx _ _ _ jset) name (JString bs) = BS.useAsCStringLen name $ \(n, sz) -> do
+    (ds, d) <- strArr bs
+    jset ctx (fromIntegral sz) n ds d
 
 -- | Return a @'Ptr' ()@ suitable to be passed to @JSetA@
 --
@@ -146,7 +194,7 @@ repaArr jty arr = do
         sz = product sh
     let wid = 32 + 8 * (rank' + sz)
     ptr <- mallocBytes (fromIntegral wid)
-    pokeByteOff ptr 0 (227 :: CLLong)
+    pokeByteOff ptr 0 (227 :: CLLong) -- I think this is because it's non-boxed
     pokeByteOff ptr (sizeOf (undefined :: CLLong)) (jTypeToInt jty)
     pokeByteOff ptr (2 * sizeOf (undefined :: CLLong)) sz
     pokeByteOff ptr (3 * sizeOf (undefined :: CLLong)) rank'
@@ -156,6 +204,22 @@ repaArr jty arr = do
     withForeignPtr (RF.toForeignPtr arr) $ \src ->
         copyArray (ptr `plusPtr` dataOff) src (fromIntegral sz)
     pure (wid, ptr)
+
+strArr :: BS.ByteString -> IO (CLLong, Ptr ())
+strArr bs = do
+    let len = BS.length bs
+        wid = 40 + 8 * (1 + len `div` 8)
+        len' = fromIntegral len :: CLLong
+    ptr <- mallocBytes wid
+    pokeByteOff ptr 0 (227 :: CLLong)
+    pokeByteOff ptr (sizeOf (undefined :: CLLong)) (jTypeToInt JChar)
+    pokeByteOff ptr (2 * sizeOf (undefined :: CLLong)) len'
+    pokeByteOff ptr (3 * sizeOf (undefined :: CLLong)) (1 :: CLLong)
+    pokeByteOff ptr (4 * sizeOf (undefined :: CLLong)) len'
+    let dataOff = 5 * sizeOf (undefined :: CLLong)
+    BS.useAsCString bs $ \pSrc ->
+        copyArray (ptr `plusPtr` dataOff) pSrc len
+    pure (fromIntegral wid, ptr)
 
 repaSize :: (R.Source r e, R.Shape sh) => R.Array r sh e -> (CLLong, [CLLong])
 repaSize arr = let sh = R.extent arr in (fromIntegral $ R.rank sh, fromIntegral <$> R.listOfShape sh)

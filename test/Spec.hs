@@ -19,6 +19,7 @@ main = do
             , testCase "Reads a string" (jStr jenv)
             , testCase "Sends an array to J" (jSetA jenv)
             , testCase "Uses J to perform a complex calculation" (regress jenv)
+            , testCase "Writes strigns to J values" (stringRoundtrip jenv)
             ]
 
 regress :: JEnv -> Assertion
@@ -30,6 +31,12 @@ regress jenv = do
     bsDispatch jenv "reg_result =: ys %. xs ^/ i.2"
     res <- getJData jenv "reg_result"
     doubleVect res @?= [5.995204332975845e-15,1.9999999999999971]
+
+stringRoundtrip :: JEnv -> Assertion
+stringRoundtrip jenv = do
+    setJData jenv "stringy_string" (JString "hello" :: JData R.Z)
+    res <- unwrapStr <$> getJData jenv "stringy_string"
+    res @?= "hello"
 
 jSetA :: JEnv -> Assertion
 jSetA jenv = do
