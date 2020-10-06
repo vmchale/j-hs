@@ -6,17 +6,6 @@ module Language.J ( -- * Environment
                   , libLinux
                   , bsDispatch
                   , bsOut
-                  -- * FFI
-                  , JDoType
-                  , JGetMType
-                  , JGetRType
-                  , J
-                  , mkJDo
-                  , mkJInit
-                  , mkJGetM
-                  -- * Marshaling (to Haskell)
-                  , JType (..)
-                  , intToJType
                   , JAtom (..)
                   , getAtomInternal
                   -- * Repa
@@ -25,21 +14,17 @@ module Language.J ( -- * Environment
                   ) where
 
 import           Control.Applicative             (pure, (<$>), (<*>))
+import qualified Data.Array.Repa                 as R
+import qualified Data.Array.Repa.Repr.ForeignPtr as RF
 import           Data.ByteString                 as BS
 import           Data.Functor                    (void)
 import           Foreign.C.String                (CString)
-import           Foreign.C.Types                 (CChar, CDouble, CInt (..),
-                                                  CLLong (..), CSize (..))
-import           Foreign.ForeignPtr              (ForeignPtr, castForeignPtr,
-                                                  mallocForeignPtrBytes,
-                                                  withForeignPtr)
+import           Foreign.C.Types                 (CChar, CDouble, CInt (..), CLLong (..), CSize (..))
+import           Foreign.ForeignPtr              (ForeignPtr, castForeignPtr, mallocForeignPtrBytes, withForeignPtr)
 import           Foreign.Marshal                 (alloca, peekArray)
 import           Foreign.Ptr                     (FunPtr, Ptr)
 import           Foreign.Storable                (peek, sizeOf)
-import           System.Posix.ByteString         (RTLDFlags (RTLD_LAZY),
-                                                  RawFilePath, dlopen, dlsym)
-import qualified Data.Array.Repa                 as R
-import qualified Data.Array.Repa.Repr.ForeignPtr as RF
+import           System.Posix.ByteString         (RTLDFlags (RTLD_LAZY), RawFilePath, dlopen, dlsym)
 
 -- TODO: windows support
 -- (https://hackage.haskell.org/package/Win32-2.10.0.0/docs/System-Win32-DLL.html#v:getProcAddress)
@@ -89,6 +74,8 @@ bsDispatch (JEnv ctx jdo _ _) bs =
     void $ BS.useAsCString bs $ jdo ctx
 
 -- | Read last output
+--
+-- For debugging
 bsOut :: JEnv -> IO BS.ByteString
 bsOut (JEnv ctx _ _ jout) = BS.packCString =<< jout ctx
 
@@ -126,6 +113,7 @@ data JAtom = JAtom { ty     :: !JType
 
 data JData sh = JIntArr !(R.Array RF.F sh CInt)
               | JDoubleArr !(R.Array RF.F sh CDouble)
+              | JBoolArr !(R.Array RF.F sh CChar)
               | JString !BS.ByteString
 
 -- | J types
@@ -144,5 +132,4 @@ intToJType _ = error "Unsupported type!"
 
 jData :: R.Shape sh => JAtom -> JData sh
 jData (JAtom JInteger _ sh fp) = JIntArr $ RF.fromForeignPtr (R.shapeOfList $ fmap fromIntegral sh) (castForeignPtr fp)
-jData (JAtom JDouble _ sh fp) = JDoubleArr $ RF.fromForeignPtr (R.shapeOfList $ fmap fromIntegral sh) (castForeignPtr fp)
-
+jData (JAtom JDouble _ sh fp)  = JDoubleArr $ RF.fromForeignPtr (R.shapeOfList $ fmap fromIntegral sh) (castForeignPtr fp)

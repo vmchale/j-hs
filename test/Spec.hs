@@ -2,11 +2,8 @@
 
 module Main ( main ) where
 
-import           Data.Array.Repa       as R
-import qualified Data.ByteString       as BS
-import           Foreign.C.Types       (CDouble)
-import           Foreign.Marshal.Alloc (alloca)
-import           Foreign.Storable      (peek)
+import           Data.Array.Repa  as R
+import           Foreign.C.Types  (CDouble)
 import           Language.J
 import           Test.Tasty
 import           Test.Tasty.HUnit
@@ -29,9 +26,10 @@ jComp jenv = do
 
 doubleList :: JData Z -> [CDouble]
 doubleList (JDoubleArr arr) = R.toList arr
+doubleList _                = error "Test suite failure!"
 
 jType :: JEnv -> Assertion
-jType jenv@(JEnv ctx _ jget _) = do
+jType jenv = do
     bsDispatch jenv "a =: 6?6"
     res <- getAtomInternal jenv "a"
     shape res @?= [6]

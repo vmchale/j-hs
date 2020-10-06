@@ -54,7 +54,6 @@ test-suite j-test
         j -any,
         tasty -any,
         tasty-hunit -any,
-        bytestring -any,
         repa -any
 
     if impl(ghc >=8.0)
