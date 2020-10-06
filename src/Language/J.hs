@@ -19,26 +19,32 @@ module Language.J ( -- * Environment
                   , intToJType
                   , JAtom (..)
                   , getAtomInternal
+                  -- * Repa
+                  , JData (..)
+                  , jData
                   ) where
 
-import           Control.Applicative     (pure, (<$>), (<*>))
-import           Data.ByteString         as BS
-import           Data.Functor            (void)
-import           Foreign.C.String        (CString)
-import           Foreign.C.Types         (CInt (..), CLLong (..), CSize (..))
-import           Foreign.ForeignPtr      (ForeignPtr, mallocForeignPtrBytes,
-                                          withForeignPtr)
-import           Foreign.Marshal         (alloca, peekArray)
-import           Foreign.Ptr             (FunPtr, Ptr)
-import           Foreign.Storable        (peek)
-import           System.Posix.ByteString (RTLDFlags (RTLD_LAZY), RawFilePath,
-                                          dlopen, dlsym)
+import           Control.Applicative             (pure, (<$>), (<*>))
+import           Data.ByteString                 as BS
+import           Data.Functor                    (void)
+import           Foreign.C.String                (CString)
+import           Foreign.C.Types                 (CChar, CDouble, CInt (..),
+                                                  CLLong (..), CSize (..))
+import           Foreign.ForeignPtr              (ForeignPtr, castForeignPtr,
+                                                  mallocForeignPtrBytes,
+                                                  withForeignPtr)
+import           Foreign.Marshal                 (alloca, peekArray)
+import           Foreign.Ptr                     (FunPtr, Ptr)
+import           Foreign.Storable                (peek, sizeOf)
+import           System.Posix.ByteString         (RTLDFlags (RTLD_LAZY),
+                                                  RawFilePath, dlopen, dlsym)
+import qualified Data.Array.Repa                 as R
+import qualified Data.Array.Repa.Repr.ForeignPtr as RF
+
 -- TODO: windows support
 -- (https://hackage.haskell.org/package/Win32-2.10.0.0/docs/System-Win32-DLL.html#v:getProcAddress)
 
 -- TODO: atoms of some sort? more useful https://github.com/jsoftware/stats_jserver4r/blob/4c94fc6df351fab34791aa9d78d158eaefd33b17/source/lib/j2r.c
--- https://github.com/jsoftware/stats_jserver4r/blob/4c94fc6df351fab34791aa9d78d158eaefd33b17/source/lib/base.c#L39
--- https://github.com/jsoftware/stats_jserver4r/blob/4c94fc6df351fab34791aa9d78d158eaefd33b17/source/lib/base.h
 
 data J
 
@@ -49,7 +55,7 @@ data JEnv = JEnv { context   :: Ptr J
                  }
 
 type JDoType = Ptr J -> CString -> IO CInt
-type JGetMType = Ptr J -> CString -> Ptr CLLong -> Ptr CLLong -> Ptr (Ptr CLLong) -> Ptr (Ptr CLLong) -> IO CInt
+type JGetMType = Ptr J -> CString -> Ptr CLLong -> Ptr CLLong -> Ptr (Ptr CLLong) -> Ptr (Ptr ()) -> IO CInt
 type JGetRType = Ptr J -> IO CString
 
 foreign import ccall "dynamic" mkJDo :: FunPtr JDoType -> JDoType
@@ -58,17 +64,15 @@ foreign import ccall "dynamic" mkJGetM :: FunPtr JGetMType -> JGetMType
 foreign import ccall "dynamic" mkJGetR :: FunPtr JGetRType -> JGetRType
 
 
-foreign import ccall unsafe "memcpy" memcpy :: Ptr a -> Ptr a -> CSize -> IO (Ptr ())
+foreign import ccall unsafe "memcpy" memcpy :: Ptr a -> Ptr b -> CSize -> IO (Ptr ())
 
+-- | Expected 'RawFilePath' to the library on a Linux machine.
 libLinux :: RawFilePath
 libLinux = "/usr/lib/x86_64-linux-gnu/libj.so"
 
--- repa? massiv...
-
 -- | Get a J environment
 --
--- Don't pass the resultant 'JEnv' between threads; that fails for whatever
--- reason
+-- Don't pass the resultant 'JEnv' between threads
 jinit :: RawFilePath -- ^ Path to J library
       -> IO JEnv
 jinit libFp = do
@@ -88,7 +92,8 @@ bsDispatch (JEnv ctx jdo _ _) bs =
 bsOut :: JEnv -> IO BS.ByteString
 bsOut (JEnv ctx _ _ jout) = BS.packCString =<< jout ctx
 
-getAtomInternal :: JEnv -> BS.ByteString -> IO JAtom
+getAtomInternal :: JEnv -> BS.ByteString -- ^ Name of the value in question
+                -> IO JAtom
 getAtomInternal (JEnv ctx _ jget _) bs = do
     BS.useAsCString bs $ \name ->
         alloca $ \t ->
@@ -100,8 +105,14 @@ getAtomInternal (JEnv ctx _ jget _) bs = do
             rank' <- peek r
             let intRank = fromIntegral rank'
             shape' <- peekArray intRank =<< peek s
-            res <- mallocForeignPtrBytes intRank
-            let arrSz = fromIntegral $ product shape'
+            let mult = case ty' of
+                    JBool    -> sizeOf (undefined :: CChar)
+                    JChar    -> sizeOf (undefined :: CChar)
+                    JInteger -> sizeOf (undefined :: CInt)
+                    JDouble  -> sizeOf (undefined :: CDouble)
+            let resBytes = mult * intRank
+            res <- mallocForeignPtrBytes resBytes
+            let arrSz = fromIntegral mult * fromIntegral (product shape')
             withForeignPtr res $ \r -> do
                 d' <- peek d
                 memcpy r d' arrSz
@@ -110,23 +121,28 @@ getAtomInternal (JEnv ctx _ jget _) bs = do
 data JAtom = JAtom { ty     :: !JType
                    , rank   :: !CLLong
                    , shape  :: ![CLLong]
-                   , datums :: !(ForeignPtr CLLong) -- ^ \'data\' is a Haskell keyword
+                   , datums :: !(ForeignPtr ()) -- ^ \'data\' is a Haskell keyword
                    }
+
+data JData sh = JIntArr !(R.Array RF.F sh CInt)
+              | JDoubleArr !(R.Array RF.F sh CDouble)
+              | JString !BS.ByteString
 
 -- | J types
 data JType = JBool
            | JChar
            | JInteger
            | JDouble
-           | JComplex
-           | JBoxed
            deriving (Show, Eq)
 
 intToJType :: CLLong -> JType
-intToJType 1  = JBool
-intToJType 2  = JChar
-intToJType 4  = JInteger
-intToJType 8  = JDouble
-intToJType 16 = JComplex
-intToJType 32 = JBoxed
-intToJType _  = error "Unknown type!"
+intToJType 1 = JBool
+intToJType 2 = JChar
+intToJType 4 = JInteger
+intToJType 8 = JDouble
+intToJType _ = error "Unsupported type!"
+
+jData :: R.Shape sh => JAtom -> JData sh
+jData (JAtom JInteger _ sh fp) = JIntArr $ RF.fromForeignPtr (R.shapeOfList $ fmap fromIntegral sh) (castForeignPtr fp)
+jData (JAtom JDouble _ sh fp) = JDoubleArr $ RF.fromForeignPtr (R.shapeOfList $ fmap fromIntegral sh) (castForeignPtr fp)
+
