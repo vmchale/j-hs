@@ -25,7 +25,7 @@ import           Foreign.C.Types                 (CChar, CDouble, CInt (..), CLL
 import           Foreign.ForeignPtr              (ForeignPtr, castForeignPtr, mallocForeignPtrBytes, withForeignPtr)
 import           Foreign.Marshal                 (alloca, copyArray, mallocBytes, peekArray, pokeArray)
 import           Foreign.Ptr                     (FunPtr, Ptr, plusPtr)
-import           Foreign.Storable                (peek, pokeByteOff, sizeOf)
+import           Foreign.Storable                (Storable, peek, pokeByteOff, sizeOf)
 import           System.Posix.ByteString         (RTLDFlags (RTLD_LAZY), RawFilePath, dlopen, dlsym)
 
 -- TODO: windows support
@@ -105,7 +105,7 @@ getAtomInternal (JEnv ctx _ jget _ _) bs = do
                     JDouble  -> sizeOf (undefined :: CDouble)
             let resBytes = mult * intRank
             res <- mallocForeignPtrBytes resBytes
-            let arrSz = fromIntegral mult * fromIntegral (product shape')
+            let arrSz = mult * fromIntegral (product shape')
             withForeignPtr res $ \r' -> do
                 d' <- peek d
                 copyArray r' d' arrSz
@@ -118,20 +118,27 @@ data JData sh = JIntArr !(R.Array RF.F sh CInt)
               | JBoolArr !(R.Array RF.F sh CChar)
               | JString !BS.ByteString
 
-setJData :: (R.Shape sh) => JEnv -> BS.ByteString -> JData sh -> IO CInt
+setJData :: (R.Shape sh) => JEnv -> BS.ByteString -- ^ Name
+                         -> JData sh -> IO CInt
 setJData (JEnv ctx _ _ _ jset) name (JIntArr iarr) = BS.useAsCStringLen name $ \(n, sz) -> do
-    (ds, d) <- repaIntArr iarr
+    (ds, d) <- repaArr JInteger iarr
     jset ctx (fromIntegral sz) n ds d
+setJData (JEnv ctx _ _ _ jset) name (JDoubleArr iarr) = BS.useAsCStringLen name $ \(n, sz) -> do
+    (ds, d) <- repaArr JDouble iarr
+    jset ctx (fromIntegral sz) n ds d
+setJData _ _ _ = error "Yet to be implemented"
 
 -- | Return a @'Ptr' ()@ suitable to be passed to @JSetA@
-repaIntArr :: (R.Shape sh) => R.Array RF.F sh CInt -> IO (CLLong, Ptr ())
-repaIntArr arr = do
+--
+-- To be used on integer and double arrays
+repaArr :: (R.Shape sh, Storable e) => JType -> R.Array RF.F sh e -> IO (CLLong, Ptr ())
+repaArr jty arr = do
     let (rank', sh) = repaSize arr
         sz = product sh
     let wid = 32 + 8 * (rank' + sz)
     ptr <- mallocBytes (fromIntegral wid)
     pokeByteOff ptr 0 (227 :: CLLong)
-    pokeByteOff ptr (sizeOf (undefined :: CLLong)) (4 :: CLLong) -- integer type
+    pokeByteOff ptr (sizeOf (undefined :: CLLong)) (jTypeToInt jty)
     pokeByteOff ptr (2 * sizeOf (undefined :: CLLong)) sz
     pokeByteOff ptr (3 * sizeOf (undefined :: CLLong)) rank'
     let dimOff = 4 * sizeOf (undefined :: CLLong)
@@ -141,7 +148,7 @@ repaIntArr arr = do
         copyArray (ptr `plusPtr` dataOff) src (fromIntegral sz)
     pure (wid, ptr)
 
-repaSize :: (R.Source r CInt, R.Shape sh) => R.Array r sh CInt -> (CLLong, [CLLong])
+repaSize :: (R.Source r e, R.Shape sh) => R.Array r sh e -> (CLLong, [CLLong])
 repaSize arr = let sh = R.extent arr in (fromIntegral $ R.rank sh, fromIntegral <$> R.listOfShape sh)
 
 -- | J types
