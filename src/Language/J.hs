@@ -106,10 +106,9 @@ getAtomInternal (JEnv ctx _ jget _) bs = do
             withForeignPtr res $ \r' -> do
                 d' <- peek d
                 memcpy r' d' arrSz
-            pure $ JAtom ty' rank' shape' res
+            pure $ JAtom ty' shape' res
 
 data JAtom = JAtom { ty     :: !JType
-                   , rank   :: !CLLong
                    , shape  :: ![CLLong]
                    , datums :: !(ForeignPtr ()) -- ^ \'data\' is a Haskell keyword
                    }
@@ -133,5 +132,6 @@ intToJType 8 = JDouble
 intToJType _ = error "Unsupported type!"
 
 jData :: R.Shape sh => JAtom -> JData sh
-jData (JAtom JInteger _ sh fp) = JIntArr $ RF.fromForeignPtr (R.shapeOfList $ fmap fromIntegral sh) (castForeignPtr fp)
-jData (JAtom JDouble _ sh fp)  = JDoubleArr $ RF.fromForeignPtr (R.shapeOfList $ fmap fromIntegral sh) (castForeignPtr fp)
+jData (JAtom JInteger sh fp) = JIntArr $ RF.fromForeignPtr (R.shapeOfList $ fmap fromIntegral sh) (castForeignPtr fp)
+jData (JAtom JDouble sh fp)  = JDoubleArr $ RF.fromForeignPtr (R.shapeOfList $ fmap fromIntegral sh) (castForeignPtr fp)
+jData (JAtom JBool sh fp)    = JBoolArr $ RF.fromForeignPtr (R.shapeOfList $ fmap fromIntegral sh) (castForeignPtr fp)
