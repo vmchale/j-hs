@@ -2,9 +2,9 @@
 
 module Main ( main ) where
 
-import           Data.Array.Repa  as R
+import qualified Data.Array.Repa  as R
 import qualified Data.ByteString  as BS
-import           Foreign.C.Types  (CDouble)
+import           Foreign.C.Types  (CDouble, CInt)
 import           Language.J
 import           Test.Tasty
 import           Test.Tasty.HUnit
@@ -32,16 +32,20 @@ jComp jenv = do
     res <- getJData jenv "a"
     doubleList res @?= [2.0]
 
-unwrapStr :: JData Z -> BS.ByteString
+unwrapStr :: JData R.Z -> BS.ByteString
 unwrapStr (JString bs) = bs
 unwrapStr _            = error "Test suite error."
 
-doubleList :: JData Z -> [CDouble]
+doubleList :: JData R.Z -> [CDouble]
 doubleList (JDoubleArr arr) = R.toList arr
 doubleList _                = error "Test suite failure!"
+
+intList :: JData R.DIM1 -> [CInt]
+intList (JIntArr arr) = R.toList arr
+intList _             = error "Test suite failure!"
 
 jType :: JEnv -> Assertion
 jType jenv = do
     bsDispatch jenv "a =: 6?6"
-    res <- getAtomInternal jenv "a"
-    shape res @?= [6]
+    res <- getJData jenv "a"
+    length (intList res) @?= 6

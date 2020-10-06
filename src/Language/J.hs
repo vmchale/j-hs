@@ -10,9 +10,6 @@ module Language.J ( -- * Environment
                   -- * Repa
                   , JData (..)
                   , getJData
-                  -- * FFI (for testing)
-                  , JAtom (..)
-                  , getAtomInternal
                   ) where
 
 import           Control.Applicative             (pure, (<$>), (<*>))
@@ -33,6 +30,9 @@ import           System.Posix.ByteString         (RTLDFlags (RTLD_LAZY), RawFile
 -- (https://hackage.haskell.org/package/Win32-2.10.0.0/docs/System-Win32-DLL.html#v:getProcAddress)
 
 -- https://github.com/jsoftware/stats_jserver4r/blob/4c94fc6df351fab34791aa9d78d158eaefd33b17/source/lib/j2r.c
+--
+-- see: https://github.com/jsoftware/stats_jserver4r/blob/4c94fc6df351fab34791aa9d78d158eaefd33b17/source/lib/r2j.c
+-- https://github.com/jsoftware/stats_jserver4r/blob/4c94fc6df351fab34791aa9d78d158eaefd33b17/source/lib/base.c#L116
 
 data J
 
@@ -108,10 +108,7 @@ getAtomInternal (JEnv ctx _ jget _) bs = do
                 memcpy r' d' arrSz
             pure $ JAtom ty' shape' res
 
-data JAtom = JAtom { ty     :: !JType
-                   , shape  :: ![CLLong]
-                   , datums :: !(ForeignPtr ()) -- ^ \'data\' is a Haskell keyword
-                   }
+data JAtom = JAtom !JType ![CLLong] !(ForeignPtr ())
 
 data JData sh = JIntArr !(R.Array RF.F sh CInt)
               | JDoubleArr !(R.Array RF.F sh CDouble)
