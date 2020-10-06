@@ -21,7 +21,7 @@ module Language.J ( -- * Environment
                   , getAtomInternal
                   ) where
 
-import           Control.Applicative     ((<$>), (<*>))
+import           Control.Applicative     (pure, (<$>), (<*>))
 import           Data.ByteString         as BS
 import           Data.Functor            (void)
 import           Foreign.C.String        (CString)
