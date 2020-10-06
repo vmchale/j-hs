@@ -6,6 +6,7 @@ module Language.J ( -- * Environment
                     JEnv
                   , jinit
                   , libLinux
+                  , libMac
                   , bsDispatch
                   , bsOut
                   -- * Repa
@@ -54,6 +55,10 @@ foreign import ccall "dynamic" mkJSetA :: FunPtr JSetAType -> JSetAType
 -- | Expected 'RawFilePath' to the library on a Linux machine.
 libLinux :: RawFilePath
 libLinux = "/usr/lib/x86_64-linux-gnu/libj.so"
+
+-- | Expected 'RawFilePath' to the library on Mac.
+libMac :: RawFilePath
+libMac = "/Applications/j64-807/bin/libj.dylib"
 
 -- | Get a J environment
 --
