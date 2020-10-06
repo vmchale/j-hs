@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 -- | Marshal a limited subset of J arrays into Repa arrays.
@@ -125,8 +126,8 @@ data A = Arep { flag  :: !CLLong -- 227 once malloc'd
               , shape :: ![CLLong]
               }
 
-repaSize :: R.Array rep sh CInt -> (CLLong, [CLLong])
-repaSize = undefined
+repaSize :: (R.Source r CInt, R.Shape sh) => R.Array r sh CInt -> (CLLong, [CLLong])
+repaSize arr = let sh = R.extent arr in (fromIntegral $ R.rank sh, fromIntegral <$> R.listOfShape sh)
 
 -- | J types
 data JType = JBool
