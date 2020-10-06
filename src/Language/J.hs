@@ -22,9 +22,9 @@ import           Data.Functor                    (void)
 import           Foreign.C.String                (CString)
 import           Foreign.C.Types                 (CChar, CDouble, CInt (..), CLLong (..), CSize (..))
 import           Foreign.ForeignPtr              (ForeignPtr, castForeignPtr, mallocForeignPtrBytes, withForeignPtr)
-import           Foreign.Marshal                 (alloca, peekArray)
+import           Foreign.Marshal                 (alloca, mallocBytes, peekArray)
 import           Foreign.Ptr                     (FunPtr, Ptr)
-import           Foreign.Storable                (peek, sizeOf)
+import           Foreign.Storable                (peek, pokeByteOff, sizeOf)
 import           System.Posix.ByteString         (RTLDFlags (RTLD_LAZY), RawFilePath, dlopen, dlsym)
 
 -- TODO: windows support
@@ -119,12 +119,19 @@ data JData sh = JIntArr !(R.Array RF.F sh CInt)
               | JBoolArr !(R.Array RF.F sh CChar)
               | JString !BS.ByteString
 
-data A = Arep { flag  :: !CLLong -- 227 once malloc'd
-              , ty    :: !CLLong
-              , count :: !CLLong
-              , rank  :: !CLLong
-              , shape :: ![CLLong]
-              }
+-- | Return a @'Ptr' ()@ suitable to be passed to @JSetA@
+repaIntArr :: (R.Source r CInt, R.Shape sh) => R.Array r sh CInt -> IO (CLLong, Ptr ())
+repaIntArr arr = do
+    let (rank', sh) = repaSize arr
+        sz = product sh
+    let wid = 32 + 8 * (rank' + sz)
+    ptr <- mallocBytes (fromIntegral wid)
+    pokeByteOff ptr 0 (227 :: CLLong)
+    pokeByteOff ptr (sizeOf (undefined :: CLLong)) (4 :: CLLong)
+    pokeByteOff ptr (2 * sizeOf (undefined :: CLLong)) sz
+    pokeByteOff ptr (2 * sizeOf (undefined :: CLLong)) rank'
+    -- toForeignPtr
+    pure (0, ptr)
 
 repaSize :: (R.Source r CInt, R.Shape sh) => R.Array r sh CInt -> (CLLong, [CLLong])
 repaSize arr = let sh = R.extent arr in (fromIntegral $ R.rank sh, fromIntegral <$> R.listOfShape sh)
