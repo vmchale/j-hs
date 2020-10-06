@@ -36,16 +36,18 @@ import           System.Posix.ByteString         (RTLDFlags (RTLD_LAZY), RawFile
 
 data J
 
-data JEnv = JEnv (Ptr J) JDoType JGetMType JGetRType
+data JEnv = JEnv (Ptr J) JDoType JGetMType JGetRType JSetAType
 
 type JDoType = Ptr J -> CString -> IO CInt
 type JGetMType = Ptr J -> CString -> Ptr CLLong -> Ptr CLLong -> Ptr (Ptr CLLong) -> Ptr (Ptr ()) -> IO CInt
 type JGetRType = Ptr J -> IO CString
+type JSetAType = Ptr J -> CLLong -> CString -> CLLong -> Ptr () -> IO CInt
 
 foreign import ccall "dynamic" mkJDo :: FunPtr JDoType -> JDoType
 foreign import ccall "dynamic" mkJInit :: FunPtr (IO (Ptr J)) -> IO (Ptr J)
 foreign import ccall "dynamic" mkJGetM :: FunPtr JGetMType -> JGetMType
 foreign import ccall "dynamic" mkJGetR :: FunPtr JGetRType -> JGetRType
+foreign import ccall "dynamic" mkJSetA :: FunPtr JSetAType -> JSetAType
 
 foreign import ccall unsafe "memcpy" memcpy :: Ptr a -> Ptr b -> CSize -> IO (Ptr ())
 
@@ -64,18 +66,19 @@ jinit libFp = do
     let jeval = mkJDo <$> dlsym libj "JDo"
     let jread = mkJGetM <$> dlsym libj "JGetM"
     let jOut = mkJGetR <$> dlsym libj "JGetR"
-    JEnv jt <$> jeval <*> jread <*> jOut
+    let jSet = mkJSetA <$> dlsym libj "JSetA"
+    JEnv jt <$> jeval <*> jread <*> jOut <*> jSet
 
 -- | Send some J code to the environment.
 bsDispatch :: JEnv -> BS.ByteString -> IO ()
-bsDispatch (JEnv ctx jdo _ _) bs =
+bsDispatch (JEnv ctx jdo _ _ _) bs =
     void $ BS.useAsCString bs $ jdo ctx
 
 -- | Read last output
 --
 -- For debugging
 bsOut :: JEnv -> IO BS.ByteString
-bsOut (JEnv ctx _ _ jout) = BS.packCString =<< jout ctx
+bsOut (JEnv ctx _ _ jout _) = BS.packCString =<< jout ctx
 
 getJData :: R.Shape sh
          => JEnv -> BS.ByteString -- ^ Name of the value in question
@@ -84,7 +87,7 @@ getJData jenv bs = jData <$> getAtomInternal jenv bs
 
 getAtomInternal :: JEnv -> BS.ByteString -- ^ Name of the value in question
                 -> IO JAtom
-getAtomInternal (JEnv ctx _ jget _) bs = do
+getAtomInternal (JEnv ctx _ jget _ _) bs = do
     BS.useAsCString bs $ \name ->
         alloca $ \t ->
         alloca $ \s ->
@@ -115,6 +118,16 @@ data JData sh = JIntArr !(R.Array RF.F sh CInt)
               | JBoolArr !(R.Array RF.F sh CChar)
               | JString !BS.ByteString
 
+data A = Arep { flag  :: !CLLong -- 227 once malloc'd
+              , ty    :: !CLLong
+              , count :: !CLLong
+              , rank  :: !CLLong
+              , shape :: ![CLLong]
+              }
+
+repaSize :: R.Array rep sh CInt -> (CLLong, [CLLong])
+repaSize = undefined
+
 -- | J types
 data JType = JBool
            | JChar
@@ -127,6 +140,12 @@ intToJType 2 = JChar
 intToJType 4 = JInteger
 intToJType 8 = JDouble
 intToJType _ = error "Unsupported type!"
+
+jTypeToInt :: JType -> CLLong
+jTypeToInt JBool    = 1
+jTypeToInt JChar    = 2
+jTypeToInt JInteger = 4
+jTypeToInt JDouble  = 8
 
 jData :: R.Shape sh => JAtom -> JData sh
 jData (JAtom JInteger sh fp) = JIntArr $ RF.fromForeignPtr (R.shapeOfList $ fmap fromIntegral sh) (castForeignPtr fp)
