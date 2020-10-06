@@ -8,7 +8,7 @@ maintainer:      vamchale@gmail.com
 author:          Vanessa McHale
 synopsis:        J in Haskell
 description:     Haskell library for calling J
-category:        Language, Interpreters
+category:        Interpreters, FFI, Array, J
 build-type:      Simple
 extra-doc-files:
     README.md
