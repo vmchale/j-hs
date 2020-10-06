@@ -60,6 +60,7 @@ import qualified Data.ByteString                 as BS
 import qualified Data.ByteString.Char8           as ASCII
 import qualified Data.ByteString.Internal        as BS
 import           Data.Functor                    (void)
+import           Data.Semigroup                  ((<>))
 import           Foreign.C.String                (CString)
 import           Foreign.C.Types                 (CChar, CDouble, CInt (..), CLLong (..))
 import           Foreign.ForeignPtr              (ForeignPtr, castForeignPtr, mallocForeignPtrBytes, withForeignPtr)

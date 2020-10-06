@@ -30,6 +30,9 @@ library
         bytestring -any,
         repa -any
 
+    if !impl(ghc >=8.0)
+        build-depends: semigroups -any
+
     if impl(ghc >=8.0)
         ghc-options:
             -Wincomplete-uni-patterns -Wincomplete-record-updates
