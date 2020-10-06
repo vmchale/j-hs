@@ -1,0 +1,7 @@
+---
+cradle:
+  cabal:
+    - path: "./src"
+      component: "lib:j"
+    - path: "./test/Spec.hs"
+      component: "test:j-test"
