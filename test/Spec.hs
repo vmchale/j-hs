@@ -28,11 +28,7 @@ jComp jenv = do
 jType :: JEnv -> Assertion
 jType jenv@(JEnv ctx _ jget _) = do
     bsDispatch jenv "a =: 6?6"
-    BS.useAsCString "a" $ \a ->
-        alloca $ \t ->
-        alloca $ \s ->
-        alloca $ \r ->
-        alloca $ \d -> do
-            jget ctx a t s r d
-            t' <- peek t
-            intToJType t' @?= JInteger
+    res <- getAtomInternal jenv "a"
+    -- ty res @?= JInteger
+    -- rank res @?= 1
+    shape res @?= [6]

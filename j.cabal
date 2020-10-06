@@ -19,14 +19,18 @@ source-repository head
     location: https://github.com/vmchale/j-hs
 
 library
-    exposed-modules:  Language.J
+    exposed-modules:
+        Language.J
+        Language.J.Repa
+
     hs-source-dirs:   src
     default-language: Haskell2010
     ghc-options:      -Wall
     build-depends:
         base >=4.7 && <5,
         unix -any,
-        bytestring -any
+        bytestring -any,
+        repa -any
 
     if impl(ghc >=8.0)
         ghc-options:
