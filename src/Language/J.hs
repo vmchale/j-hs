@@ -18,7 +18,8 @@ module Language.J ( -- * Environment
 import           Control.Applicative             (pure, (<$>), (<*>))
 import qualified Data.Array.Repa                 as R
 import qualified Data.Array.Repa.Repr.ForeignPtr as RF
-import           Data.ByteString                 as BS
+import qualified Data.ByteString                 as BS
+import qualified Data.ByteString.Internal        as BS
 import           Data.Functor                    (void)
 import           Foreign.C.String                (CString)
 import           Foreign.C.Types                 (CChar, CDouble, CInt (..), CLLong (..), CSize (..))
@@ -135,3 +136,5 @@ jData :: R.Shape sh => JAtom -> JData sh
 jData (JAtom JInteger sh fp) = JIntArr $ RF.fromForeignPtr (R.shapeOfList $ fmap fromIntegral sh) (castForeignPtr fp)
 jData (JAtom JDouble sh fp)  = JDoubleArr $ RF.fromForeignPtr (R.shapeOfList $ fmap fromIntegral sh) (castForeignPtr fp)
 jData (JAtom JBool sh fp)    = JBoolArr $ RF.fromForeignPtr (R.shapeOfList $ fmap fromIntegral sh) (castForeignPtr fp)
+jData (JAtom JChar [l] fp)   = JString $ BS.fromForeignPtr (castForeignPtr fp) 0 (fromIntegral l)
+jData (JAtom JChar _ _)      = error "Not supported."
