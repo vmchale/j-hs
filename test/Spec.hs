@@ -17,7 +17,17 @@ main = do
             [ testCase "Performs calculation and has sensible output" (jComp jenv)
             , testCase "Reads back type in the environment" (jType jenv)
             , testCase "Reads a string" (jStr jenv)
+            , testCase "Sends an array to J" (jSetA jenv)
             ]
+
+jSetA :: JEnv -> Assertion
+jSetA jenv = do
+    let hsArr = R.fromListUnboxed (R.ix1 3) [1,3,6]
+    setJData jenv "b" (JIntArr $ R.copyS $ R.map (fromIntegral :: Int -> CInt) hsArr)
+    res <- getJData jenv "b"
+    bsDispatch jenv "b"
+    print =<< bsOut jenv
+    intList res @?= [1,3,6]
 
 jStr :: JEnv -> Assertion
 jStr jenv = do

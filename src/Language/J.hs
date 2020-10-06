@@ -11,6 +11,7 @@ module Language.J ( -- * Environment
                   -- * Repa
                   , JData (..)
                   , getJData
+                  , setJData
                   ) where
 
 import           Control.Applicative             (pure, (<$>), (<*>))
@@ -20,10 +21,10 @@ import qualified Data.ByteString                 as BS
 import qualified Data.ByteString.Internal        as BS
 import           Data.Functor                    (void)
 import           Foreign.C.String                (CString)
-import           Foreign.C.Types                 (CChar, CDouble, CInt (..), CLLong (..), CSize (..))
+import           Foreign.C.Types                 (CChar, CDouble, CInt (..), CLLong (..))
 import           Foreign.ForeignPtr              (ForeignPtr, castForeignPtr, mallocForeignPtrBytes, withForeignPtr)
-import           Foreign.Marshal                 (alloca, mallocBytes, peekArray)
-import           Foreign.Ptr                     (FunPtr, Ptr)
+import           Foreign.Marshal                 (alloca, copyArray, mallocBytes, peekArray, pokeArray)
+import           Foreign.Ptr                     (FunPtr, Ptr, plusPtr)
 import           Foreign.Storable                (peek, pokeByteOff, sizeOf)
 import           System.Posix.ByteString         (RTLDFlags (RTLD_LAZY), RawFilePath, dlopen, dlsym)
 
@@ -40,7 +41,7 @@ data J
 data JEnv = JEnv (Ptr J) JDoType JGetMType JGetRType JSetAType
 
 type JDoType = Ptr J -> CString -> IO CInt
-type JGetMType = Ptr J -> CString -> Ptr CLLong -> Ptr CLLong -> Ptr (Ptr CLLong) -> Ptr (Ptr ()) -> IO CInt
+type JGetMType = Ptr J -> CString -> Ptr CLLong -> Ptr CLLong -> Ptr (Ptr CLLong) -> Ptr (Ptr CChar) -> IO CInt
 type JGetRType = Ptr J -> IO CString
 type JSetAType = Ptr J -> CLLong -> CString -> CLLong -> Ptr () -> IO CInt
 
@@ -49,8 +50,6 @@ foreign import ccall "dynamic" mkJInit :: FunPtr (IO (Ptr J)) -> IO (Ptr J)
 foreign import ccall "dynamic" mkJGetM :: FunPtr JGetMType -> JGetMType
 foreign import ccall "dynamic" mkJGetR :: FunPtr JGetRType -> JGetRType
 foreign import ccall "dynamic" mkJSetA :: FunPtr JSetAType -> JSetAType
-
-foreign import ccall unsafe "memcpy" memcpy :: Ptr a -> Ptr b -> CSize -> IO (Ptr ())
 
 -- | Expected 'RawFilePath' to the library on a Linux machine.
 libLinux :: RawFilePath
@@ -109,29 +108,38 @@ getAtomInternal (JEnv ctx _ jget _ _) bs = do
             let arrSz = fromIntegral mult * fromIntegral (product shape')
             withForeignPtr res $ \r' -> do
                 d' <- peek d
-                memcpy r' d' arrSz
+                copyArray r' d' arrSz
             pure $ JAtom ty' shape' res
 
-data JAtom = JAtom !JType ![CLLong] !(ForeignPtr ())
+data JAtom = JAtom !JType ![CLLong] !(ForeignPtr CChar)
 
 data JData sh = JIntArr !(R.Array RF.F sh CInt)
               | JDoubleArr !(R.Array RF.F sh CDouble)
               | JBoolArr !(R.Array RF.F sh CChar)
               | JString !BS.ByteString
 
+setJData :: (R.Shape sh) => JEnv -> BS.ByteString -> JData sh -> IO CInt
+setJData (JEnv ctx _ _ _ jset) name (JIntArr iarr) = BS.useAsCStringLen name $ \(n, sz) -> do
+    (ds, d) <- repaIntArr iarr
+    jset ctx (fromIntegral sz) n ds d
+
 -- | Return a @'Ptr' ()@ suitable to be passed to @JSetA@
-repaIntArr :: (R.Source r CInt, R.Shape sh) => R.Array r sh CInt -> IO (CLLong, Ptr ())
+repaIntArr :: (R.Shape sh) => R.Array RF.F sh CInt -> IO (CLLong, Ptr ())
 repaIntArr arr = do
     let (rank', sh) = repaSize arr
         sz = product sh
     let wid = 32 + 8 * (rank' + sz)
     ptr <- mallocBytes (fromIntegral wid)
     pokeByteOff ptr 0 (227 :: CLLong)
-    pokeByteOff ptr (sizeOf (undefined :: CLLong)) (4 :: CLLong)
+    pokeByteOff ptr (sizeOf (undefined :: CLLong)) (4 :: CLLong) -- integer type
     pokeByteOff ptr (2 * sizeOf (undefined :: CLLong)) sz
-    pokeByteOff ptr (2 * sizeOf (undefined :: CLLong)) rank'
-    -- toForeignPtr
-    pure (0, ptr)
+    pokeByteOff ptr (3 * sizeOf (undefined :: CLLong)) rank'
+    let dimOff = 4 * sizeOf (undefined :: CLLong)
+    pokeArray (ptr `plusPtr` dimOff) sh
+    let dataOff = dimOff + fromIntegral rank' * sizeOf (undefined :: CLLong)
+    withForeignPtr (RF.toForeignPtr arr) $ \src ->
+        copyArray (ptr `plusPtr` dataOff) src (fromIntegral sz)
+    pure (wid, ptr)
 
 repaSize :: (R.Source r CInt, R.Shape sh) => R.Array r sh CInt -> (CLLong, [CLLong])
 repaSize arr = let sh = R.extent arr in (fromIntegral $ R.rank sh, fromIntegral <$> R.listOfShape sh)
