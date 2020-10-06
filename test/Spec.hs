@@ -2,9 +2,10 @@
 
 module Main ( main ) where
 
-import qualified Data.Array.Repa  as R
-import qualified Data.ByteString  as BS
-import           Foreign.C.Types  (CDouble, CInt)
+import           Control.Applicative ((<$>))
+import qualified Data.Array.Repa     as R
+import qualified Data.ByteString     as BS
+import           Foreign.C.Types     (CDouble, CInt)
 import           Language.J
 import           Test.Tasty
 import           Test.Tasty.HUnit
