@@ -129,4 +129,4 @@ intToJType 4  = JInteger
 intToJType 8  = JDouble
 intToJType 16 = JComplex
 intToJType 32 = JBoxed
-intToJType _  = error "Bad or unknown type!"
+intToJType _  = error "Unknown type!"
