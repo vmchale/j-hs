@@ -132,6 +132,7 @@ bsDispatch (JEnv ctx jdo _ _ _) bs =
 bsOut :: JEnv -> IO BS.ByteString
 bsOut (JEnv ctx _ _ jout _) = BS.packCString =<< jout ctx
 
+-- | \( O(n) \) in the array size
 getJData :: R.Shape sh
          => JEnv -> BS.ByteString -- ^ Name of the value in question
          -> IO (JData sh)
@@ -171,6 +172,7 @@ data JData sh = JIntArr !(R.Array RF.F sh CInt)
               | JBoolArr !(R.Array RF.F sh CChar)
               | JString !BS.ByteString
 
+-- | \( O(n) \) in the array size
 setJData :: (R.Shape sh) => JEnv -> BS.ByteString -- ^ Name
                          -> JData sh -> IO CInt
 setJData (JEnv ctx _ _ _ jset) name (JIntArr iarr) = BS.useAsCStringLen name $ \(n, sz) -> do
