@@ -55,8 +55,8 @@ jStr jenv = do
 jComp :: JEnv -> Assertion
 jComp jenv = do
     bsDispatch jenv "harmonic =: (+/ % #) &.: %"
-    bsDispatch jenv "a =: harmonic 1 3 6"
-    res <- getJData jenv "a"
+    bsDispatch jenv "c =: harmonic 1 3 6"
+    res <- getJData jenv "c"
     doubleScalar res @?= [2.0]
 
 unwrapStr :: JData R.Z -> BS.ByteString

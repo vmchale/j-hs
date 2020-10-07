@@ -1,9 +1,10 @@
+{-# LANGUAGE CPP               #-}
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 -- | Marshal a limited subset of J arrays into Repa arrays.
 --
--- = Example
+-- = Tutorial
 --
 -- Suppose we wish to perform linear regression. In J we could do:
 --
@@ -35,6 +36,25 @@
 -- @
 --
 -- There are three steps to do the calculation, plus one to get a J environment.
+--
+--     (1) Use 'jinit' with the appropriate file path for your platform
+--
+--     2. Marshal Haskell values and send them to the J environment. To do so, we
+--     use 'setJData', which takes a 'JData' containing a repa array or
+--     a string.
+--
+--     3. Perform calculations within the J environment. Here, we use
+--     'bsDispatch' to compute some results and assign them within J
+--
+--     4. Marshal J values back to Haskell. We use 'getJData' again.
+--
+--
+--  Since marshaling data between J and Haskell is expensive, it's best to do as
+--  much computation as possible in J.
+--
+--  = FFI
+--
+--  If you want to marshal data yourself, say to use a @Vector@, look at 'JEnv'.
 module Language.J ( -- * Environment
                     JEnv (..)
                   , jinit
@@ -79,6 +99,7 @@ import           System.Posix.ByteString         (RTLDFlags (RTLD_LAZY), RawFile
 -- see: https://github.com/jsoftware/stats_jserver4r/blob/4c94fc6df351fab34791aa9d78d158eaefd33b17/source/lib/r2j.c
 -- https://github.com/jsoftware/stats_jserver4r/blob/4c94fc6df351fab34791aa9d78d158eaefd33b17/source/lib/base.c#L116
 
+-- | Abstract context
 data J
 
 data JEnv = JEnv { context   :: Ptr J
@@ -108,6 +129,8 @@ type JVersion = [Int]
 -- | Expected 'RawFilePath' to the library on Mac.
 libMac :: JVersion -> RawFilePath
 libMac v = "/Applications/j64-" <> ASCII.pack (concatMap show v) <> "/bin/libj.dylib"
+
+-- process address
 
 -- | Get a J environment
 --
