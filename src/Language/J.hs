@@ -46,7 +46,7 @@
 --     3. Perform calculations within the J environment. Here, we use
 --     'bsDispatch' to compute some results and assign them within J
 --
---     4. Marshal J values back to Haskell. We use 'getJData' again.
+--     4. Marshal J values back to Haskell. We use 'getJData'.
 --
 --
 --  Since marshaling data between J and Haskell is expensive, it's best to do as
