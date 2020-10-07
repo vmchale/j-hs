@@ -3,7 +3,7 @@
 
 -- | Marshal a limited subset of J arrays into Repa arrays.
 --
--- = Tutorial
+-- = Example
 --
 -- Suppose we wish to perform linear regression. In J we could do:
 --
@@ -33,6 +33,8 @@
 --    'JDoubleArr' res <- 'getJData' jenv "reg_result"
 --    R.toList res
 -- @
+--
+-- There are three steps to do the calculation, plus one to get a J environment.
 module Language.J ( -- * Environment
                     JEnv (..)
                   , jinit
