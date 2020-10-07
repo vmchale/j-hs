@@ -2,19 +2,17 @@
 
 module Main ( main ) where
 
-import           Control.Applicative   ((<$>))
-import qualified Data.Array.Repa       as R
-import qualified Data.ByteString       as BS
-import qualified Data.Vector.Unboxed   as V
-import           Foreign.C.Types       (CDouble, CInt)
+import           Control.Applicative ((<$>))
+import qualified Data.Array.Repa     as R
+import qualified Data.ByteString     as BS
+import           Foreign.C.Types     (CDouble, CInt)
 import           Language.J
-import           Statistics.Regression (olsRegress)
 import           Test.Tasty
 import           Test.Tasty.HUnit
 
 main :: IO ()
 main = do
-    jenv <- jinit (libMac [8,0,7])
+    jenv <- jinit libLinux
     defaultMain $
         testGroup "J dl"
             [ testCase "Performs calculation and has sensible output" (jComp jenv)
@@ -24,13 +22,6 @@ main = do
             , testCase "Uses J to perform a complex calculation" (regress jenv)
             , testCase "Writes strigns to J values" (stringRoundtrip jenv)
             ]
-
-hsRegress :: Assertion
-hsRegress = do
-    let xs = V.fromList [1.0,2.0,3.0]
-        ys = V.fromList [2.0,4.0,6.0]
-    let (res, _) = olsRegress [xs] ys
-    V.toList res @?= [5.995204332975845e-15,1.9999999999999971]
 
 regress :: JEnv -> Assertion
 regress jenv = do
