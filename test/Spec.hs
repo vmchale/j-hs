@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP               #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Main ( main ) where
@@ -12,7 +13,13 @@ import           Test.Tasty.HUnit
 
 main :: IO ()
 main = do
+#ifdef linux_HOST_OS
     jenv <- jinit libLinux
+#else
+#ifdef darwin_HOST_OS
+    jenv <- jinit (libMac [8,0,7])
+#endif
+#endif
     defaultMain $
         testGroup "J dl"
             [ testCase "Performs calculation and has sensible output" (jComp jenv)
