@@ -89,7 +89,10 @@ import           Foreign.ForeignPtr              (ForeignPtr, castForeignPtr, ma
 import           Foreign.Marshal                 (alloca, copyArray, mallocBytes, peekArray, pokeArray)
 import           Foreign.Ptr                     (FunPtr, Ptr, plusPtr)
 import           Foreign.Storable                (Storable, peek, pokeByteOff, sizeOf)
+import           System.Info                     (arch)
+#ifndef mingw32_HOST_OS
 import           System.Posix.ByteString         (RTLDFlags (RTLD_LAZY), RawFilePath, dlopen, dlsym)
+#endif
 
 -- Upstream reference
 -- https://github.com/jsoftware/stats_jserver4r/blob/4c94fc6df351fab34791aa9d78d158eaefd33b17/source/lib/j2r.c
@@ -118,7 +121,7 @@ foreign import ccall "dynamic" mkJSetA :: FunPtr JSetAType -> JSetAType
 
 -- | Expected 'RawFilePath' to the library on a Linux machine.
 libLinux :: RawFilePath
-libLinux = "/usr/lib/x86_64-linux-gnu/libj.so"
+libLinux = "/usr/lib/" <> ASCII.pack arch <> "-linux-gnu/libj.so"
 
 type JVersion = [Int]
 

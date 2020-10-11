@@ -26,9 +26,14 @@ library
     ghc-options:      -Wall
     build-depends:
         base >=4.7 && <5,
-        unix >=2.7.0.0,
         bytestring >=0.10,
         repa >=3.2.5.0
+
+    if !os(windows)
+        build-depends: unix >=2.7.0.0
+
+    else
+        build-depends: Win32 -any
 
     if !impl(ghc >=8.0)
         build-depends: semigroups -any
