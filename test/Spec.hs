@@ -28,7 +28,17 @@ main = do
             , testCase "Sends an array to J" (jSetA jenv)
             , testCase "Uses J to perform a complex calculation" (regress jenv)
             , testCase "Writes strigns to J values" (stringRoundtrip jenv)
+            , testCase "Uses J for something Haskell would have a hard time with" (fill jenv)
             ]
+
+
+fill :: JEnv -> Assertion
+fill jenv = do
+    bsDispatch jenv "random_res =: ? 70 70 $ 1e10"
+    res <- getJData jenv "random_res"
+    extrExtent res @?= [70, 70]
+    where extrExtent :: JData R.DIM2 -> [Int]
+          extrExtent (JIntArr res) = R.listOfShape $ R.extent res
 
 regress :: JEnv -> Assertion
 regress jenv = do
@@ -68,19 +78,15 @@ jComp jenv = do
 
 unwrapStr :: JData R.Z -> BS.ByteString
 unwrapStr (JString bs) = bs
-unwrapStr _            = error "Test suite error."
 
 doubleVect :: JData R.DIM1 -> [CDouble]
 doubleVect (JDoubleArr arr) = R.toList arr
-doubleVect _                = error "Test suite failure!"
 
 doubleScalar :: JData R.Z -> [CDouble]
 doubleScalar (JDoubleArr arr) = R.toList arr
-doubleScalar _                = error "Test suite failure!"
 
 intList :: JData R.DIM1 -> [CInt]
 intList (JIntArr arr) = R.toList arr
-intList _             = error "Test suite failure!"
 
 jType :: JEnv -> Assertion
 jType jenv = do
