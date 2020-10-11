@@ -92,6 +92,8 @@ import           Foreign.Storable                (Storable, peek, pokeByteOff, s
 import           System.Info                     (arch)
 #ifndef mingw32_HOST_OS
 import           System.Posix.ByteString         (RTLDFlags (RTLD_LAZY), RawFilePath, dlopen, dlsym)
+#else
+import           System.Win32.DLL                (getProcAddress, loadLibrary)
 #endif
 
 -- Upstream reference
@@ -119,21 +121,22 @@ foreign import ccall "dynamic" mkJGetM :: FunPtr JGetMType -> JGetMType
 foreign import ccall "dynamic" mkJGetR :: FunPtr JGetRType -> JGetRType
 foreign import ccall "dynamic" mkJSetA :: FunPtr JSetAType -> JSetAType
 
+#ifndef mingw32_HOST_OS
+type JVersion = [Int]
+
 -- | Expected 'RawFilePath' to the library on a Linux machine.
 libLinux :: RawFilePath
 libLinux = "/usr/lib/" <> ASCII.pack arch <> "-linux-gnu/libj.so"
 
-type JVersion = [Int]
-
 -- | Expected 'RawFilePath' to the library on Mac.
 libMac :: JVersion -> RawFilePath
 libMac v = "/Applications/j64-" <> ASCII.pack (concatMap show v) <> "/bin/libj.dylib"
-
--- process address
+#endif
 
 -- | Get a J environment
 --
 -- Passing the resultant 'JEnv' between threads can cause unexpected bugs.
+#ifndef mingw32_HOST_OS
 jinit :: RawFilePath -- ^ Path to J library
       -> IO JEnv
 jinit libFp = do
@@ -144,6 +147,19 @@ jinit libFp = do
     let jOut = mkJGetR <$> dlsym libj "JGetR"
     let jSet = mkJSetA <$> dlsym libj "JSetA"
     JEnv jt <$> jeval <*> jread <*> jOut <*> jSet
+#else
+jinit :: FilePath
+      -> IO JEnv
+jinit libFp = do
+    libj <- loadLibrary libFp
+    jt <- mkJInit =<< getProcAddress libj "JInit"
+    let jeval = mkJDo <$> getProcAddress libj "JDo"
+    let jread = mkJGetM <$> getProcAddress libj "JGetM"
+    let jOut = mkJGetR <$> getProcAddress libj "JGetR"
+    let jSet = mkJSetA <$> getProcAddress libj "JSetA"
+    JEnv jt <$> jeval <*> jread <*> jOut <*> jSet
+#endif
+
 
 -- | Send some J code to the environment.
 bsDispatch :: JEnv -> BS.ByteString -> IO ()
