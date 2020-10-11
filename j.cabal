@@ -56,6 +56,7 @@ test-suite j-test
     type:             exitcode-stdio-1.0
     main-is:          Spec.hs
     hs-source-dirs:   test
+    other-extensions: CPP OverloadedStrings
     default-language: Haskell2010
     ghc-options:      "-with-rtsopts -K1K" -Wall
     build-depends:
