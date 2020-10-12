@@ -18,6 +18,10 @@ main = do
 #else
 #ifdef darwin_HOST_OS
     jenv <- jinit (libMac [8,0,7])
+#else
+#ifdef mingw32_HOST_OS
+    jenv <- jinit (libWindows [9,0,1])
+#endif
 #endif
 #endif
     defaultMain $

@@ -58,8 +58,12 @@
 module Language.J ( -- * Environment
                     JEnv (..)
                   , jinit
+#ifndef mingw32_HOST_OS
                   , libLinux
                   , libMac
+#else
+                  , libWindows
+#endif
                   , bsDispatch
                   , bsOut
                   , JVersion
@@ -87,7 +91,7 @@ import           Foreign.C.String                (CString)
 import           Foreign.C.Types                 (CChar, CDouble, CInt (..), CLLong (..))
 import           Foreign.ForeignPtr              (ForeignPtr, castForeignPtr, mallocForeignPtrBytes, withForeignPtr)
 import           Foreign.Marshal                 (alloca, copyArray, mallocBytes, peekArray, pokeArray)
-import           Foreign.Ptr                     (FunPtr, Ptr, plusPtr)
+import           Foreign.Ptr                     (FunPtr, Ptr, castPtrToFunPtr, plusPtr)
 import           Foreign.Storable                (Storable, peek, pokeByteOff, sizeOf)
 import           System.Info                     (arch)
 #ifndef mingw32_HOST_OS
@@ -121,16 +125,22 @@ foreign import ccall "dynamic" mkJGetM :: FunPtr JGetMType -> JGetMType
 foreign import ccall "dynamic" mkJGetR :: FunPtr JGetRType -> JGetRType
 foreign import ccall "dynamic" mkJSetA :: FunPtr JSetAType -> JSetAType
 
-#ifndef mingw32_HOST_OS
 type JVersion = [Int]
 
+squashVersion :: JVersion -> String
+squashVersion = concatMap show
+
+#ifndef mingw32_HOST_OS
 -- | Expected 'RawFilePath' to the library on a Linux machine.
 libLinux :: RawFilePath
 libLinux = "/usr/lib/" <> ASCII.pack arch <> "-linux-gnu/libj.so"
 
 -- | Expected 'RawFilePath' to the library on Mac.
 libMac :: JVersion -> RawFilePath
-libMac v = "/Applications/j64-" <> ASCII.pack (concatMap show v) <> "/bin/libj.dylib"
+libMac v = "/Applications/j64-" <> ASCII.pack (squashVersion v) <> "/bin/libj.dylib"
+#else
+libWindows :: JVersion -> FilePath
+libWindows v = "C:\\Program Files\\J" <> squashVersion v <> "\\bin\\j.dll"
 #endif
 
 -- | Get a J environment
@@ -152,11 +162,11 @@ jinit :: FilePath
       -> IO JEnv
 jinit libFp = do
     libj <- loadLibrary libFp
-    jt <- mkJInit =<< getProcAddress libj "JInit"
-    let jeval = mkJDo <$> getProcAddress libj "JDo"
-    let jread = mkJGetM <$> getProcAddress libj "JGetM"
-    let jOut = mkJGetR <$> getProcAddress libj "JGetR"
-    let jSet = mkJSetA <$> getProcAddress libj "JSetA"
+    jt <- mkJInit . castPtrToFunPtr =<< getProcAddress libj "JInit"
+    let jeval = mkJDo . castPtrToFunPtr <$> getProcAddress libj "JDo"
+    let jread = mkJGetM . castPtrToFunPtr <$> getProcAddress libj "JGetM"
+    let jOut = mkJGetR . castPtrToFunPtr <$> getProcAddress libj "JGetR"
+    let jSet = mkJSetA . castPtrToFunPtr <$> getProcAddress libj "JSetA"
     JEnv jt <$> jeval <*> jread <*> jOut <*> jSet
 #endif
 
