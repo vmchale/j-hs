@@ -31,7 +31,7 @@ main = do
             , testCase "Reads a string" (jStr jenv)
             , testCase "Sends an array to J" (jSetA jenv)
             , testCase "Uses J to perform a complex calculation" (regress jenv)
-            , testCase "Writes strigns to J values" (stringRoundtrip jenv)
+            , testCase "Writes strings to J values" (stringRoundtrip jenv)
             , testCase "Uses J for something Haskell would have a hard time with" (fill jenv)
             ]
 
