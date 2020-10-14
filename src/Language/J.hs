@@ -139,6 +139,7 @@ libLinux = "/usr/lib/" <> ASCII.pack arch <> "-linux-gnu/libj.so"
 libMac :: JVersion -> RawFilePath
 libMac v = "/Applications/j64-" <> ASCII.pack (squashVersion v) <> "/bin/libj.dylib"
 #else
+-- | @since 0.1.1.0
 libWindows :: JVersion -> FilePath
 libWindows v = "C:\\Program Files\\J" <> squashVersion v <> "\\bin\\j.dll"
 #endif
