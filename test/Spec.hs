@@ -40,6 +40,14 @@ loadNoFail :: JEnv -> Assertion
 loadNoFail jenv = do
 #ifdef linux_HOST_OS
     jLoad jenv (linuxProfile "9.01")
+#else
+#ifdef darwin_HOST_OS
+    jLoad jenv (macProfile "8.07")
+#else
+#ifdef mingw32_HOST_OS
+    jLoad jenv (macProfile "9.01")
+#endif
+#endif
 #endif
     bsDispatch jenv "load'tables/csv'"
     res <- bsOut jenv

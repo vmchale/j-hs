@@ -75,6 +75,8 @@ module Language.J ( -- * Environment
                   , jLoad
                   , Profile (..)
                   , linuxProfile
+                  , macProfile
+                  , windowsProfile
 #ifndef mingw32_HOST_OS
                   , libLinux
                   , libMac
@@ -148,6 +150,9 @@ type JVersion = [Int]
 squashVersion :: JVersion -> String
 squashVersion = concatMap show
 
+squashVersionBS :: JVersion -> BS.ByteString
+squashVersionBS = ASCII.pack . squashVersion
+
 #ifndef mingw32_HOST_OS
 -- | Expected 'RawFilePath' to the library on a Linux machine.
 libLinux :: RawFilePath
@@ -155,7 +160,7 @@ libLinux = "/usr/lib/" <> ASCII.pack arch <> "-linux-gnu/libj.so"
 
 -- | Expected 'RawFilePath' to the library on Mac.
 libMac :: JVersion -> RawFilePath
-libMac v = "/Applications/j64-" <> ASCII.pack (squashVersion v) <> "/bin/libj.dylib"
+libMac v = "/Applications/j64-" <> squashVersionBS v <> "/bin/libj.dylib"
 #else
 -- | @since 0.1.1.0
 libWindows :: JVersion -> FilePath
@@ -171,10 +176,26 @@ binpathLinux = "/usr/bin"
 dllLinux :: BS.ByteString -> BS.ByteString
 dllLinux v = "libj.so." <> v
 
+-- | @since 0.1.2.0
 linuxProfile :: BS.ByteString -- ^ J version, e.g. @"9.01"@
              -> Profile
 linuxProfile ver = Profile (profLinux ver) binpathLinux (dllLinux ver)
 
+-- | @since 0.1.2.0
+macProfile :: JVersion
+           -> Profile
+macProfile v =
+    let binPathMac = "/Applications/j64-" <> squashVersionBS v <> "/bin"
+        in Profile (binPathMac <> "/profile.ijs") binPathMac (binPathMac <> "/libj.dylib")
+
+-- | @since 0.1.2.0
+windowsProfile :: JVersion
+               -> Profile
+windowsProfile v =
+    let binPathWindows = "C:\\Program Files\\J" <> squashVersionBS v <> "\\bin"
+        in Profile (binPathWindows <> "\\profile.ijs") binPathWindows (binPathWindows <> "j.dll")
+
+-- | @since 0.1.2.0
 data Profile = Profile { profPath :: BS.ByteString -- ^ @profile.ijs@
                        , binPath  :: BS.ByteString
                        , dllName  :: BS.ByteString
