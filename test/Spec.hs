@@ -32,9 +32,19 @@ main = do
             , testCase "Sends an array to J" (jSetA jenv)
             , testCase "Uses J to perform a complex calculation" (regress jenv)
             , testCase "Writes strings to J values" (stringRoundtrip jenv)
-            , testCase "Uses J for something Haskell would have a hard time with" (fill jenv)
+            -- , testCase "Uses J for something Haskell would have a hard time with" (fill jenv)
+            , testCase "Loads a library" (loadNoFail jenv)
             ]
 
+loadNoFail :: JEnv -> Assertion
+loadNoFail jenv = do
+#ifdef linux_HOST_OS
+    jLoad jenv linuxProfile
+#endif
+    bsDispatch jenv "load'tables/csv'"
+    res <- bsOut jenv
+    assertBool "Doesn't fail" $
+        not ("error: " `BS.isInfixOf` res)
 
 fill :: JEnv -> Assertion
 fill jenv = do

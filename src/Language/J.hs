@@ -58,9 +58,13 @@
 module Language.J ( -- * Environment
                     JEnv (..)
                   , jinit
+                  , jLoad
+                  , Profile (..)
+                  , linuxProfile
 #ifndef mingw32_HOST_OS
                   , libLinux
                   , libMac
+                  , profLinux
 #else
                   , libWindows
 #endif
@@ -143,6 +147,31 @@ libMac v = "/Applications/j64-" <> ASCII.pack (squashVersion v) <> "/bin/libj.dy
 libWindows :: JVersion -> FilePath
 libWindows v = "C:\\Program Files\\J" <> squashVersion v <> "\\bin\\j.dll"
 #endif
+
+profLinux :: BS.ByteString
+profLinux = "/etc/j/9.01/profile.ijs"
+
+binpathLinux :: BS.ByteString
+binpathLinux = "/usr/bin"
+
+dllLinux :: BS.ByteString
+dllLinux = "libj.so.9.01"
+
+linuxProfile :: Profile
+linuxProfile = Profile profLinux binpathLinux dllLinux
+
+data Profile = Profile { profPath :: BS.ByteString -- ^ @profile.ijs@
+                       , binPath  :: BS.ByteString
+                       , dllName  :: BS.ByteString
+                       }
+
+-- | Load user profile.
+--
+-- @since 0.1.2.0@
+jLoad :: JEnv
+      -> Profile
+      -> IO ()
+jLoad jenv (Profile fp bin dll) = bsDispatch jenv ("(3 : '0!:0 y')<'"<> fp <> "'[BINPATH_z_=:'" <> bin <> "'[LIBFILE_z_=:'" <> dll <> "'[ARGV_z_=:''")
 
 -- | Get a J environment
 --
