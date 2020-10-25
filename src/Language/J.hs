@@ -148,17 +148,18 @@ libWindows :: JVersion -> FilePath
 libWindows v = "C:\\Program Files\\J" <> squashVersion v <> "\\bin\\j.dll"
 #endif
 
-profLinux :: BS.ByteString
-profLinux = "/etc/j/9.01/profile.ijs"
+profLinux :: BS.ByteString -> BS.ByteString
+profLinux v = "/etc/j/" <> v <> "/profile.ijs"
 
 binpathLinux :: BS.ByteString
 binpathLinux = "/usr/bin"
 
-dllLinux :: BS.ByteString
-dllLinux = "libj.so.9.01"
+dllLinux :: BS.ByteString -> BS.ByteString
+dllLinux v = "libj.so." <> v
 
-linuxProfile :: Profile
-linuxProfile = Profile profLinux binpathLinux dllLinux
+linuxProfile :: BS.ByteString -- ^ J version, e.g. @"9.01"@
+             -> Profile
+linuxProfile ver = Profile (profLinux ver) binpathLinux (dllLinux ver)
 
 data Profile = Profile { profPath :: BS.ByteString -- ^ @profile.ijs@
                        , binPath  :: BS.ByteString

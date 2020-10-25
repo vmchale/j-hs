@@ -39,7 +39,7 @@ main = do
 loadNoFail :: JEnv -> Assertion
 loadNoFail jenv = do
 #ifdef linux_HOST_OS
-    jLoad jenv linuxProfile
+    jLoad jenv (linuxProfile "9.01")
 #endif
     bsDispatch jenv "load'tables/csv'"
     res <- bsOut jenv
