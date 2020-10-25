@@ -52,6 +52,20 @@
 --  Since marshaling data between J and Haskell is expensive, it's best to do as
 --  much computation as possible in J.
 --
+--  == Loading Profile
+--
+--  If you would like to use user libraries, you need to use 'jLoad' on the
+--  'JEnv'. As an example:
+--
+--  @
+--  do
+--      jenv <- 'jinit' 'libLinux'
+--      'jLoad' jenv ('linuxProfile' "9.01")
+--      'bsDispatch' 'jenv' "load'tables/csv'"
+--  @
+--
+--  This will load the CSV addon, assuming it is installed.
+--
 --  = FFI
 --
 --  If you want to marshal data yourself, say to use a @Vector@, look at 'JEnv'.
