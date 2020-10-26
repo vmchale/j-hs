@@ -42,10 +42,10 @@ loadNoFail jenv = do
     jLoad jenv (linuxProfile "9.01")
 #else
 #ifdef darwin_HOST_OS
-    jLoad jenv (macProfile "8.07")
+    jLoad jenv (macProfile [8,0,7])
 #else
 #ifdef mingw32_HOST_OS
-    jLoad jenv (macProfile "9.01")
+    jLoad jenv (windowsProfile [9,0,1])
 #endif
 #endif
 #endif
