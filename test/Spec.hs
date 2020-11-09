@@ -34,6 +34,7 @@ main = do
             , testCase "Writes strings to J values" (stringRoundtrip jenv)
             -- , testCase "Uses J for something Haskell would have a hard time with" (fill jenv)
             , testCase "Loads a library" (loadNoFail jenv)
+            , testCase "Sends an integer array" (printRes jenv)
             ]
 
 loadNoFail :: JEnv -> Assertion
@@ -53,6 +54,13 @@ loadNoFail jenv = do
     res <- bsOut jenv
     assertBool "Doesn't fail" $
         not ("error: " `BS.isInfixOf` res)
+
+printRes :: JEnv -> Assertion
+printRes jenv = do
+    setJData jenv "plot_data" $ JIntArr $ R.copyS $ R.map (fromIntegral :: Int -> CInt) $ R.fromListUnboxed (R.ix1 3) [1,10,2]
+    bsDispatch jenv "plot_data"
+    res <- bsOut jenv
+    res @?= "1 10 2"
 
 fill :: JEnv -> Assertion
 fill jenv = do
