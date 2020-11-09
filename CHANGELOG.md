@@ -3,6 +3,7 @@
 ## 0.2.0.0
 
   * Fix bug in integer arrays passed to J
+  * `JIntArr` now takes an array of `CLLong`
 
 ## 0.1.2.0
 
