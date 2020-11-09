@@ -270,7 +270,7 @@ getAtomInternal (JEnv ctx _ jget _ _) bs = do
             let mult = case ty' of
                     JBool    -> sizeOf (undefined :: CChar)
                     JChar    -> sizeOf (undefined :: CChar)
-                    JInteger -> sizeOf (undefined :: CInt)
+                    JInteger -> sizeOf (undefined :: CLLong)
                     JDouble  -> sizeOf (undefined :: CDouble)
             let resBytes = mult * intRank
             res <- mallocForeignPtrBytes resBytes
@@ -283,7 +283,7 @@ getAtomInternal (JEnv ctx _ jget _ _) bs = do
 data JAtom = JAtom !JType ![CLLong] !(ForeignPtr CChar)
 
 -- | J data backed by repa array
-data JData sh = JIntArr !(R.Array RF.F sh CInt)
+data JData sh = JIntArr !(R.Array RF.F sh CLLong)
               | JDoubleArr !(R.Array RF.F sh CDouble)
               | JBoolArr !(R.Array RF.F sh CChar)
               | JString !BS.ByteString

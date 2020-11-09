@@ -6,7 +6,7 @@ module Main ( main ) where
 import           Control.Applicative ((<$>))
 import qualified Data.Array.Repa     as R
 import qualified Data.ByteString     as BS
-import           Foreign.C.Types     (CDouble, CInt)
+import           Foreign.C.Types     (CDouble, CLLong)
 import           Language.J
 import           Test.Tasty
 import           Test.Tasty.HUnit
@@ -57,16 +57,16 @@ loadNoFail jenv = do
 
 printRes :: JEnv -> Assertion
 printRes jenv = do
-    setJData jenv "plot_data" $ JIntArr $ R.copyS $ R.map (fromIntegral :: Int -> CInt) $ R.fromListUnboxed (R.ix1 3) [1,10,2]
+    setJData jenv "plot_data" $ JIntArr $ R.copyS $ R.map (fromIntegral :: Int -> CLLong) $ R.fromListUnboxed (R.ix1 3) [1,10,2]
     bsDispatch jenv "plot_data"
     res <- bsOut jenv
-    res @?= "1 10 2"
+    res @?= "1 10 2\n"
 
 fill :: JEnv -> Assertion
 fill jenv = do
-    bsDispatch jenv "random_res =: ? 70 70 $ 1e10"
+    bsDispatch jenv "random_res =: ? 50 50 $ 1e10"
     res <- getJData jenv "random_res"
-    extrExtent res @?= [70, 70]
+    extrExtent res @?= [50, 50]
     where extrExtent :: JData R.DIM2 -> [Int]
           extrExtent (JIntArr res) = R.listOfShape $ R.extent res
 
@@ -89,7 +89,7 @@ stringRoundtrip jenv = do
 jSetA :: JEnv -> Assertion
 jSetA jenv = do
     let hsArr = R.fromListUnboxed (R.ix1 3) [1,3,6]
-    setJData jenv "b" (JIntArr $ R.copyS $ R.map (fromIntegral :: Int -> CInt) hsArr)
+    setJData jenv "b" (JIntArr $ R.copyS $ R.map (fromIntegral :: Int -> CLLong) hsArr)
     res <- getJData jenv "b"
     intList res @?= [1,3,6]
 
@@ -115,7 +115,7 @@ doubleVect (JDoubleArr arr) = R.toList arr
 doubleScalar :: JData R.Z -> [CDouble]
 doubleScalar (JDoubleArr arr) = R.toList arr
 
-intList :: JData R.DIM1 -> [CInt]
+intList :: JData R.DIM1 -> [CLLong]
 intList (JIntArr arr) = R.toList arr
 
 jType :: JEnv -> Assertion
