@@ -1,5 +1,9 @@
 # j
 
+## 0.2.1.0
+
+  * Add support for J's complex type
+
 ## 0.2.0.0
 
   * Fix bug in integer arrays passed to J
