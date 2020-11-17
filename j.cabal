@@ -60,7 +60,7 @@ test-suite j-test
     other-extensions: CPP OverloadedStrings
     ghc-options:      "-with-rtsopts -K1K" -Wall
     build-depends:
-        base -any,
+        base >=4.8,
         j -any,
         tasty -any,
         tasty-hunit -any,
