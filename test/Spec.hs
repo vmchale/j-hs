@@ -6,6 +6,7 @@ module Main ( main ) where
 import           Control.Applicative ((<$>))
 import qualified Data.Array.Repa     as R
 import qualified Data.ByteString     as BS
+import           Data.Complex        (Complex (..))
 import           Foreign.C.Types     (CDouble, CLLong)
 import           Language.J
 import           Test.Tasty
@@ -29,7 +30,9 @@ main = do
             [ testCase "Performs calculation and has sensible output" (jComp jenv)
             , testCase "Reads back type in the environment" (jType jenv)
             , testCase "Reads a string" (jStr jenv)
+            , testCase "Reads a complex array" (jGetC jenv)
             , testCase "Sends an array to J" (jSetA jenv)
+            , testCase "Sends a complex array to J" (jSetC jenv)
             , testCase "Uses J to perform a complex calculation" (regress jenv)
             , testCase "Writes strings to J values" (stringRoundtrip jenv)
             -- , testCase "Uses J for something Haskell would have a hard time with" (fill jenv)
@@ -93,11 +96,25 @@ jSetA jenv = do
     res <- getJData jenv "b"
     intList res @?= [1,3,6]
 
+jSetC :: JEnv -> Assertion
+jSetC jenv = do
+    let hsArr = R.fromListUnboxed (R.ix1 2) [0.0:+0.0,1.0:+1.0 :: Complex Double]
+    let conv = fmap realToFrac :: Complex Double -> Complex CDouble
+    setJData jenv "c" (JComplexArr $ R.copyS $ R.map conv hsArr)
+    res <- getJData jenv "c"
+    complexVect res @?= [0.0:+0.0,1.0:+1.0]
+
 jStr :: JEnv -> Assertion
 jStr jenv = do
     bsDispatch jenv "str =: 'hello'"
     res <- getJData jenv "str"
     unwrapStr res @?= "hello"
+
+jGetC :: JEnv -> Assertion
+jGetC jenv = do
+    bsDispatch jenv "c =: j./~ i.2"
+    res <- getJData jenv "c"
+    complexVect2 res @?= [0.0:+0.0, 0.0:+1.0, 1.0:+0.0, 1.0:+1.0]
 
 jComp :: JEnv -> Assertion
 jComp jenv = do
@@ -114,6 +131,12 @@ doubleVect (JDoubleArr arr) = R.toList arr
 
 doubleScalar :: JData R.Z -> [CDouble]
 doubleScalar (JDoubleArr arr) = R.toList arr
+
+complexVect2 :: JData R.DIM2 -> [Complex CDouble]
+complexVect2 (JComplexArr arr) = R.toList arr
+
+complexVect :: JData R.DIM1 -> [Complex CDouble]
+complexVect (JComplexArr arr) = R.toList arr
 
 intList :: JData R.DIM1 -> [CLLong]
 intList (JIntArr arr) = R.toList arr
