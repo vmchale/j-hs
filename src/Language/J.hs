@@ -105,6 +105,7 @@ import qualified Data.Array.Repa.Repr.ForeignPtr as RF
 import qualified Data.ByteString                 as BS
 import qualified Data.ByteString.Char8           as ASCII
 import qualified Data.ByteString.Internal        as BS
+import           Data.Complex                    (Complex (..))
 import           Data.Functor                    (void)
 import           Data.Semigroup                  ((<>))
 import           Foreign.C.String                (CString)
@@ -267,11 +268,7 @@ getAtomInternal (JEnv ctx _ jget _ _) bs = do
             rank' <- peek r
             let intRank = fromIntegral rank'
             shape' <- peekArray intRank =<< peek s
-            let mult = case ty' of
-                    JBool    -> sizeOf (undefined :: CChar)
-                    JChar    -> sizeOf (undefined :: CChar)
-                    JInteger -> sizeOf (undefined :: CLLong)
-                    JDouble  -> sizeOf (undefined :: CDouble)
+            let mult = jTypeWidth ty'
             let resBytes = mult * intRank
             res <- mallocForeignPtrBytes resBytes
             let arrSz = mult * fromIntegral (product shape')
@@ -285,6 +282,7 @@ data JAtom = JAtom !JType ![CLLong] !(ForeignPtr CChar)
 -- | J data backed by repa array
 data JData sh = JIntArr !(R.Array RF.F sh CLLong)
               | JDoubleArr !(R.Array RF.F sh CDouble)
+              | JComplexArr !(R.Array RF.F sh (Complex CDouble))
               | JBoolArr !(R.Array RF.F sh CChar)
               | JString !BS.ByteString
 
@@ -297,6 +295,9 @@ setJData (JEnv ctx _ _ _ jset) name (JIntArr iarr) = BS.useAsCStringLen name $ \
 setJData (JEnv ctx _ _ _ jset) name (JDoubleArr iarr) = BS.useAsCStringLen name $ \(n, sz) -> do
     (ds, d) <- repaArr JDouble iarr
     jset ctx (fromIntegral sz) n ds d
+setJData (JEnv ctx _ _ _ jset) name (JComplexArr iarr) = BS.useAsCStringLen name $ \(n, sz) -> do
+    (ds, d) <- repaArr JComplex iarr
+    jset ctx (fromIntegral sz) n ds d
 setJData (JEnv ctx _ _ _ jset) name (JBoolArr iarr) = BS.useAsCStringLen name $ \(n, sz) -> do
     (ds, d) <- repaArr JBool iarr
     jset ctx (fromIntegral sz) n ds d
@@ -306,12 +307,12 @@ setJData (JEnv ctx _ _ _ jset) name (JString bs) = BS.useAsCStringLen name $ \(n
 
 -- | Return a @'Ptr' ()@ suitable to be passed to @JSetA@
 --
--- To be used on integer and double arrays
+-- To be used on integer, double, and complex arrays
 repaArr :: (R.Shape sh, Storable e) => JType -> R.Array RF.F sh e -> IO (CLLong, Ptr ())
 repaArr jty arr = do
     let (rank', sh) = repaSize arr
         sz = product sh
-    let wid = 32 + 8 * (rank' + sz)
+    let wid = 32 + (fromIntegral $ jTypeWidth jty) * (rank' + sz)
     ptr <- mallocBytes (fromIntegral wid)
     pokeByteOff ptr 0 (227 :: CLLong) -- I think this is because it's non-boxed
     pokeByteOff ptr (sizeOf (undefined :: CLLong)) (jTypeToInt jty)
@@ -348,23 +349,34 @@ data JType = JBool
            | JChar
            | JInteger
            | JDouble
+           | JComplex
 
 intToJType :: CLLong -> JType
-intToJType 1 = JBool
-intToJType 2 = JChar
-intToJType 4 = JInteger
-intToJType 8 = JDouble
-intToJType _ = error "Unsupported type!"
+intToJType 1  = JBool
+intToJType 2  = JChar
+intToJType 4  = JInteger
+intToJType 8  = JDouble
+intToJType 16 = JComplex
+intToJType _  = error "Unsupported type!"
 
 jTypeToInt :: JType -> CLLong
 jTypeToInt JBool    = 1
 jTypeToInt JChar    = 2
 jTypeToInt JInteger = 4
 jTypeToInt JDouble  = 8
+jTypeToInt JComplex = 16
+
+jTypeWidth :: JType -> Int
+jTypeWidth JBool    = sizeOf (undefined :: CChar)
+jTypeWidth JChar    = sizeOf (undefined :: CChar)
+jTypeWidth JInteger = sizeOf (undefined :: CLLong)
+jTypeWidth JDouble  = sizeOf (undefined :: CDouble)
+jTypeWidth JComplex = sizeOf (undefined :: Complex CDouble)
 
 jData :: R.Shape sh => JAtom -> JData sh
 jData (JAtom JInteger sh fp) = JIntArr $ RF.fromForeignPtr (R.shapeOfList $ fmap fromIntegral sh) (castForeignPtr fp)
 jData (JAtom JDouble sh fp)  = JDoubleArr $ RF.fromForeignPtr (R.shapeOfList $ fmap fromIntegral sh) (castForeignPtr fp)
+jData (JAtom JComplex sh fp) = JComplexArr $ RF.fromForeignPtr (R.shapeOfList $ fmap fromIntegral sh) (castForeignPtr fp)
 jData (JAtom JBool sh fp)    = JBoolArr $ RF.fromForeignPtr (R.shapeOfList $ fmap fromIntegral sh) (castForeignPtr fp)
 jData (JAtom JChar [l] fp)   = JString $ BS.fromForeignPtr (castForeignPtr fp) 0 (fromIntegral l)
 jData (JAtom JChar _ _)      = error "Not supported."
