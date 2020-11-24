@@ -25,7 +25,7 @@ library
     other-extensions: FlexibleContexts OverloadedStrings
     ghc-options:      -Wall
     build-depends:
-        base >=4.7 && <5,
+        base >=4.8 && <5,
         bytestring >=0.10,
         repa >=3.2.5.0
 
