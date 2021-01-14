@@ -312,7 +312,7 @@ repaArr :: (R.Shape sh, Storable e) => JType -> R.Array RF.F sh e -> IO (CLLong,
 repaArr jty arr = do
     let (rank', sh) = repaSize arr
         sz = product sh
-    let wid = 32 + (fromIntegral $ jTypeWidth jty) * (rank' + sz)
+    let wid = 32 + fromIntegral (jTypeWidth jty) * (rank' + sz)
     ptr <- mallocBytes (fromIntegral wid)
     pokeByteOff ptr 0 (227 :: CLLong) -- I think this is because it's non-boxed
     pokeByteOff ptr (sizeOf (undefined :: CLLong)) (jTypeToInt jty)
