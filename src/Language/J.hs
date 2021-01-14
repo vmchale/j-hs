@@ -60,7 +60,7 @@
 --  @
 --  do
 --      jenv <- 'jinit' 'libLinux'
---      'jLoad' jenv ('linuxProfile' "9.01")
+--      'jLoad' jenv ('linuxProfile' "9.02")
 --      'bsDispatch' 'jenv' "load'tables/csv'"
 --  @
 --
@@ -178,7 +178,7 @@ dllLinux :: BS.ByteString -> BS.ByteString
 dllLinux v = "libj.so." <> v
 
 -- | @since 0.1.2.0
-linuxProfile :: BS.ByteString -- ^ J version, e.g. @"9.01"@
+linuxProfile :: BS.ByteString -- ^ J version, e.g. @"9.02"@
              -> Profile
 linuxProfile ver = Profile (profLinux ver) binpathLinux (dllLinux ver)
 

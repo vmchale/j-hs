@@ -21,7 +21,7 @@ main = do
     jenv <- jinit (libMac [8,0,7])
 #else
 #ifdef mingw32_HOST_OS
-    jenv <- jinit (libWindows [9,0,1])
+    jenv <- jinit (libWindows [9,0,2])
 #endif
 #endif
 #endif
@@ -43,13 +43,13 @@ main = do
 loadNoFail :: JEnv -> Assertion
 loadNoFail jenv = do
 #ifdef linux_HOST_OS
-    jLoad jenv (linuxProfile "9.01")
+    jLoad jenv (linuxProfile "9.02")
 #else
 #ifdef darwin_HOST_OS
     jLoad jenv (macProfile [8,0,7])
 #else
 #ifdef mingw32_HOST_OS
-    jLoad jenv (windowsProfile [9,0,1])
+    jLoad jenv (windowsProfile [9,0,2])
 #endif
 #endif
 #endif
@@ -81,7 +81,7 @@ regress jenv = do
     setJData jenv "ys" (JDoubleArr $ R.copyS $ R.map (realToFrac :: Double -> CDouble) hsArr1)
     bsDispatch jenv "reg_result =: ys %. xs ^/ i.2"
     res <- getJData jenv "reg_result"
-    doubleVect res @?= [5.995204332975845e-15,1.9999999999999971]
+    doubleVect res @?= [7.105427357601002e-15,1.9999999999999967]
 
 stringRoundtrip :: JEnv -> Assertion
 stringRoundtrip jenv = do
