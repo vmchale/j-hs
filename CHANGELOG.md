@@ -1,5 +1,9 @@
 # j
 
+## 0.2.1.1
+
+  * Test suite works with J 9.02
+
 ## 0.2.1.0
 
   * Add support for J's complex type
