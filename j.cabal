@@ -27,7 +27,8 @@ library
     build-depends:
         base >=4.8 && <5,
         bytestring >=0.10,
-        repa >=3.2.5.0
+        repa >=3.2.5.0,
+        vector >=0.5
 
     if !os(windows)
         build-depends: unix >=2.7.0.0

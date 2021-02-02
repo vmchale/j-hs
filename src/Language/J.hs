@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP               #-}
+{-# LANGUAGE DeriveAnyClass    #-}
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -91,6 +92,11 @@ module Language.J ( -- * Environment
                   , JData (..)
                   , getJData
                   , setJData
+                  -- * Exceptions
+                  , JErr (..)
+                  -- * Vector helpers
+                  , tryIntVect
+                  , copyIntVect
                   -- * FFI
                   , J
                   , JDoType
@@ -100,6 +106,7 @@ module Language.J ( -- * Environment
                   ) where
 
 import           Control.Applicative             (pure, (<$>), (<*>))
+import           Control.Exception               (Exception, throw)
 import qualified Data.Array.Repa                 as R
 import qualified Data.Array.Repa.Repr.ForeignPtr as RF
 import qualified Data.ByteString                 as BS
@@ -108,6 +115,7 @@ import qualified Data.ByteString.Internal        as BS
 import           Data.Complex                    (Complex (..))
 import           Data.Functor                    (void)
 import           Data.Semigroup                  ((<>))
+import qualified Data.Vector.Unboxed             as V
 import           Foreign.C.String                (CString)
 import           Foreign.C.Types                 (CChar, CDouble, CInt (..), CLLong (..))
 import           Foreign.ForeignPtr              (ForeignPtr, castForeignPtr, mallocForeignPtrBytes, withForeignPtr)
@@ -237,7 +245,6 @@ jinit libFp = do
     JEnv jt <$> jeval <*> jread <*> jOut <*> jSet
 #endif
 
-
 -- | Send some J code to the environment.
 bsDispatch :: JEnv -> BS.ByteString -> IO ()
 bsDispatch (JEnv ctx jdo _ _ _) bs =
@@ -250,6 +257,8 @@ bsOut :: JEnv -> IO BS.ByteString
 bsOut (JEnv ctx _ _ jout _) = BS.packCString =<< jout ctx
 
 -- | \( O(n) \) in the array size
+--
+-- Throws 'JErr' for unspported conversion types.
 getJData :: R.Shape sh
          => JEnv -> BS.ByteString -- ^ Name of the value in question
          -> IO (JData sh)
@@ -285,6 +294,20 @@ data JData sh = JIntArr !(R.Array RF.F sh CLLong)
               | JComplexArr !(R.Array RF.F sh (Complex CDouble))
               | JBoolArr !(R.Array RF.F sh CChar)
               | JString !BS.ByteString
+
+data JErr = TypeError
+          | UnsupportedType
+    deriving (Show, Exception)
+
+-- | Copy into an int 'V.Vector', if possible.
+--
+-- Fail at runtime on type error
+tryIntVect :: JData R.DIM1 -> V.Vector Int
+tryIntVect (JIntArr arr) = R.toUnboxed (R.copyS $ R.map fromIntegral arr)
+tryIntVect _             = throw TypeError
+
+copyIntVect :: V.Vector Int -> JData R.DIM1
+copyIntVect = JIntArr . R.copyS . R.map fromIntegral . (\v -> R.fromUnboxed (R.ix1 $ V.length v) v)
 
 -- | \( O(n) \) in the array size
 setJData :: (R.Shape sh) => JEnv -> BS.ByteString -- ^ Name
@@ -357,7 +380,7 @@ intToJType 2  = JChar
 intToJType 4  = JInteger
 intToJType 8  = JDouble
 intToJType 16 = JComplex
-intToJType _  = error "Unsupported type!"
+intToJType _  = throw UnsupportedType
 
 jTypeToInt :: JType -> CLLong
 jTypeToInt JBool    = 1
