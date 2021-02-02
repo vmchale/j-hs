@@ -304,11 +304,15 @@ data JErr = TypeError
 -- Throws a 'JErr' on type error.
 --
 -- \( O(n) \)
+--
+-- @since 0.2.2.0
 tryIntVect :: JData R.DIM1 -> V.Vector Int
 tryIntVect (JIntArr arr) = R.toUnboxed (R.copyS $ R.map fromIntegral arr)
 tryIntVect _             = throw TypeError
 
 -- | \( O(n) \)
+--
+-- @since 0.2.2.0
 copyIntVect :: V.Vector Int -> JData R.DIM1
 copyIntVect = JIntArr . R.copyS . R.map fromIntegral . (\v -> R.fromUnboxed (R.ix1 $ V.length v) v)
 
