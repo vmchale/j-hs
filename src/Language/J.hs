@@ -297,7 +297,7 @@ data JData sh = JIntArr !(R.Array RF.F sh CLLong)
 
 data JErr = TypeError
           | UnsupportedType
-    deriving (Show, Exception)
+          deriving (Show, Exception)
 
 -- | Copy into a 'V.Vector' 'Int', if possible.
 --
