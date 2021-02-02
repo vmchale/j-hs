@@ -1,5 +1,9 @@
 # j
 
+## 0.2.2.0
+
+  * Add `tryIntVect` and `copyIntVect`
+
 ## 0.2.1.1
 
   * Test suite works with J 9.02
