@@ -299,13 +299,16 @@ data JErr = TypeError
           | UnsupportedType
     deriving (Show, Exception)
 
--- | Copy into an int 'V.Vector', if possible.
+-- | Copy into a 'V.Vector' 'Int', if possible.
 --
--- Fail at runtime on type error
+-- Throws a 'JErr' on type error.
+--
+-- \( O(n) \)
 tryIntVect :: JData R.DIM1 -> V.Vector Int
 tryIntVect (JIntArr arr) = R.toUnboxed (R.copyS $ R.map fromIntegral arr)
 tryIntVect _             = throw TypeError
 
+-- | \( O(n) \)
 copyIntVect :: V.Vector Int -> JData R.DIM1
 copyIntVect = JIntArr . R.copyS . R.map fromIntegral . (\v -> R.fromUnboxed (R.ix1 $ V.length v) v)
 
