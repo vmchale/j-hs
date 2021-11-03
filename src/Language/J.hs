@@ -81,7 +81,6 @@ module Language.J ( -- * Environment
 #ifndef mingw32_HOST_OS
                   , libLinux
                   , libMac
-                  , profLinux
 #else
                   , libWindows
 #endif
@@ -167,9 +166,9 @@ squashVersionBS = ASCII.pack . squashVersion
 libLinux :: RawFilePath
 libLinux = "/usr/lib/" <> ASCII.pack arch <> "-linux-gnu/libj.so"
 
--- | Expected 'RawFilePath' to the library on Mac.
+-- | Expected 'RawFilePath' to the library (@libj.dylib@) on Mac
 libMac :: JVersion -> RawFilePath
-libMac v = "/Applications/j64-" <> squashVersionBS v <> "/bin/libj.dylib"
+libMac v = "/Applications/j" <> squashVersionBS v <> "/bin/libj.dylib"
 #else
 -- | @since 0.1.1.0
 libWindows :: JVersion -> FilePath

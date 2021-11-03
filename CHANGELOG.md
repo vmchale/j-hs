@@ -1,5 +1,10 @@
 # j
 
+## 0.3.0.0
+
+  * `libMac` works with new path for J 9.02
+  * Remove undocumented `profLinux` function.
+
 ## 0.2.2.0
 
   * Add `tryIntVect` and `copyIntVect`
