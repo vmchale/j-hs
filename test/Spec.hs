@@ -18,7 +18,7 @@ main = do
     jenv <- jinit libLinux
 #else
 #ifdef darwin_HOST_OS
-    jenv <- jinit (libMac [8,0,7])
+    jenv <- jinit (libMac [9,0,2])
 #else
 #ifdef mingw32_HOST_OS
     jenv <- jinit (libWindows [9,0,2])
