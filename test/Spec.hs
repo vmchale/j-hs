@@ -35,7 +35,7 @@ main = do
             , testCase "Sends a complex array to J" (jSetC jenv)
             , testCase "Uses J to perform a complex calculation" (regress jenv)
             , testCase "Writes strings to J values" (stringRoundtrip jenv)
-            -- , testCase "Uses J for something Haskell would have a hard time with" (fill jenv)
+            , testCase "Uses J for something Haskell would have a hard time with" (fill jenv)
             , testCase "Loads a library" (loadNoFail jenv)
             , testCase "Sends an integer array" (printRes jenv)
             ]
