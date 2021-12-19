@@ -193,7 +193,7 @@ linuxProfile ver = Profile (profLinux ver) binpathLinux (dllLinux ver)
 macProfile :: JVersion
            -> Profile
 macProfile v =
-    let binPathMac = "/Applications/j64-" <> squashVersionBS v <> "/bin"
+    let binPathMac = "/Applications/j" <> squashVersionBS v <> "/bin"
         in Profile (binPathMac <> "/profile.ijs") binPathMac (binPathMac <> "/libj.dylib")
 
 -- | @since 0.1.2.0
