@@ -1,5 +1,9 @@
 # j
 
+## 0.3.0.1
+
+  * Change to new profile path on OS X
+
 ## 0.3.0.0
 
   * `libMac` works with new path for J 9.02
