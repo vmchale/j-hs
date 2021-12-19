@@ -18,7 +18,7 @@ main = do
     jenv <- jinit libLinux
 #else
 #ifdef darwin_HOST_OS
-    jenv <- jinit (libMac [9,0,2])
+    jenv <- jinit (libMac [9,0,3])
 #else
 #ifdef mingw32_HOST_OS
     jenv <- jinit (libWindows [9,0,2])
@@ -46,7 +46,7 @@ loadNoFail jenv = do
     jLoad jenv (linuxProfile "9.02")
 #else
 #ifdef darwin_HOST_OS
-    jLoad jenv (macProfile [8,0,7])
+    jLoad jenv (macProfile [9,0,3])
 #else
 #ifdef mingw32_HOST_OS
     jLoad jenv (windowsProfile [9,0,2])
