@@ -113,6 +113,7 @@ import qualified Data.ByteString.Char8           as ASCII
 import qualified Data.ByteString.Internal        as BS
 import           Data.Complex                    (Complex (..))
 import           Data.Functor                    (void)
+import           Data.List                       (intercalate)
 import           Data.Semigroup                  ((<>))
 import qualified Data.Vector.Unboxed             as V
 import           Foreign.C.String                (CString)
@@ -156,7 +157,7 @@ foreign import ccall "dynamic" mkJSetA :: FunPtr JSetAType -> JSetAType
 type JVersion = [Int]
 
 squashVersion :: JVersion -> String
-squashVersion = concatMap show
+squashVersion = intercalate "." . map show
 
 squashVersionBS :: JVersion -> BS.ByteString
 squashVersionBS = ASCII.pack . squashVersion
